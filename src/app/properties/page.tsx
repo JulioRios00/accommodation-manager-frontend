@@ -1,0 +1,125 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { getProperties, createProperty, updateProperty, deleteProperty, Property } from '@/services/api';
+import PropertyDialog from '@/components/crud/PropertyDialog';
+import ConfirmDialog from '@/components/crud/ConfirmDialog';
+
+export default function PropertiesPage() {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [search, setSearch] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Property | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const load = () => getProperties().then(setProperties).catch(() => {});
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async (data: Omit<Property, 'id'>, id?: string) => {
+    if (id) await updateProperty(id, data);
+    else await createProperty(data);
+    await load();
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    await deleteProperty(deleteId);
+    setDeleteId(null);
+    await load();
+  };
+
+  const columns: GridColDef[] = [
+    { field: 'code', headerName: 'Code', width: 90 },
+    { field: 'bu', headerName: 'BU', width: 70 },
+    { field: 'area', headerName: 'Area', width: 120 },
+    { field: 'fullAddress', headerName: 'Address', minWidth: 200, flex: 1 },
+    { field: 'electricityStatus', headerName: 'Electricity', width: 110 },
+    { field: 'gasStatus', headerName: 'Gas', width: 90 },
+    { field: 'keysCount', headerName: 'Keys', width: 75, type: 'number' },
+    { field: 'fobCount', headerName: 'Fobs', width: 75, type: 'number' },
+    {
+      field: 'officeKeys',
+      headerName: 'Office Keys',
+      width: 110,
+      renderCell: (params) => (
+        <Chip label={params.value ? 'Yes' : 'No'} color={params.value ? 'success' : 'default'} size="small" />
+      ),
+    },
+    {
+      field: 'actions',
+      headerName: '',
+      width: 90,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <IconButton size="small" onClick={() => { setEditing(params.row as Property); setDialogOpen(true); }}>
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ];
+
+  const q = search.toLowerCase();
+  const filtered = properties.filter(p =>
+    [p.code, p.bu, p.area, p.fullAddress].some(v => v?.toLowerCase().includes(q))
+  );
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>Properties</Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          Add Property
+        </Button>
+      </Box>
+
+      <TextField
+        placeholder="Search by code, BU, area or address…"
+        size="small"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        sx={{ mb: 2, width: 340 }}
+        slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
+      />
+
+      <Box sx={{ width: '100%', overflow: 'auto' }}>
+        <Box sx={{ height: 500, minWidth: 650, bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+          <DataGrid
+            rows={filtered}
+            columns={columns}
+            pageSizeOptions={[10, 25]}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            disableRowSelectionOnClick
+            sx={{
+              border: 'none',
+              '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
+              '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+            }}
+          />
+        </Box>
+      </Box>
+
+      <PropertyDialog
+        open={dialogOpen}
+        initial={editing}
+        onClose={() => setDialogOpen(false)}
+        onSave={handleSave}
+      />
+      <ConfirmDialog
+        open={!!deleteId}
+        message="Delete this property? This cannot be undone."
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteId(null)}
+      />
+    </Box>
+  );
+}
