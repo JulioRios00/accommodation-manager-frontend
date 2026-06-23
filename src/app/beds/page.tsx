@@ -9,8 +9,10 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getBeds, getProperties, createBed, updateBed, deleteBed, Bed, Property } from '@/services/api';
 import BedDialog from '@/components/crud/BedDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
+import { useRole } from '@/hooks/useRole';
 
 export default function BedsPage() {
+  const { can } = useRole();
   const [beds, setBeds] = useState<Bed[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [search, setSearch] = useState('');
@@ -57,12 +59,16 @@ export default function BedsPage() {
       sortable: false,
       renderCell: (params) => (
         <Box>
-          <IconButton size="small" onClick={() => { setEditing(params.row as Bed); setDialogOpen(true); }}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
-            <DeleteIcon fontSize="small" />
-          </IconButton>
+          {can('bed:write') && (
+            <IconButton size="small" onClick={() => { setEditing(params.row as Bed); setDialogOpen(true); }}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
+          {can('bed:write') && (
+            <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
         </Box>
       ),
     },
@@ -78,9 +84,11 @@ export default function BedsPage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Beds</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
-          Add Bed
-        </Button>
+        {can('bed:write') && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            Add Bed
+          </Button>
+        )}
       </Box>
 
       <TextField

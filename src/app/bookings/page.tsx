@@ -13,6 +13,7 @@ import {
 } from '@/services/api';
 import BookingDialog from '@/components/crud/BookingDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
+import { useRole } from '@/hooks/useRole';
 
 function formatDate(d: string | null | undefined) {
   if (!d) return '—';
@@ -23,6 +24,7 @@ const statusColor = (s: string) =>
   s === 'active' ? 'success' : s === 'upcoming' ? 'warning' : 'default';
 
 export default function BookingsPage() {
+  const { can } = useRole();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
@@ -100,12 +102,16 @@ export default function BookingsPage() {
       sortable: false,
       renderCell: (params) => (
         <Box>
-          <IconButton size="small" onClick={() => { setEditing((params.row as any)._raw); setDialogOpen(true); }}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
-            <DeleteIcon fontSize="small" />
-          </IconButton>
+          {can('booking:write') && (
+            <IconButton size="small" onClick={() => { setEditing((params.row as any)._raw); setDialogOpen(true); }}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
+          {can('booking:write') && (
+            <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
         </Box>
       ),
     },
@@ -130,9 +136,11 @@ export default function BookingsPage() {
             <ToggleButton value="upcoming">Upcoming</ToggleButton>
             <ToggleButton value="completed">Completed</ToggleButton>
           </ToggleButtonGroup>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
-            Add Booking
-          </Button>
+          {can('booking:write') && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
+              Add Booking
+            </Button>
+          )}
         </Box>
       </Box>
 

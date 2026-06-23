@@ -11,6 +11,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import StatsCard from '@/components/dashboard/StatsCard';
 import XlsxUploader from '@/components/upload/XlsxUploader';
 import { getDashboardStats, getBeds, DashboardStats, Bed } from '@/services/api';
+import { useRole } from '@/hooks/useRole';
 
 const bedColumns: GridColDef[] = [
   {
@@ -52,6 +53,7 @@ function formatDate(d: string | null | undefined) {
 }
 
 export default function DashboardPage() {
+  const { can } = useRole();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [importOpen, setImportOpen] = useState(false);
@@ -87,15 +89,17 @@ export default function DashboardPage() {
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           Dashboard
         </Typography>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<UploadFileIcon />}
-          onClick={() => setImportOpen((v) => !v)}
-          sx={{ borderColor: '#114C5A', color: '#114C5A', whiteSpace: 'nowrap' }}
-        >
-          Import XLSX
-        </Button>
+        {can('import') && (
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<UploadFileIcon />}
+            onClick={() => setImportOpen((v) => !v)}
+            sx={{ borderColor: '#114C5A', color: '#114C5A', whiteSpace: 'nowrap' }}
+          >
+            Import XLSX
+          </Button>
+        )}
       </Box>
 
       {/* KPI cards — responsive grid: 2 cols mobile, 3 cols tablet, 5 cols desktop */}

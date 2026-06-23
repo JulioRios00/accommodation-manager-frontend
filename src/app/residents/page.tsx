@@ -9,8 +9,10 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getResidents, createResident, updateResident, deleteResident, Resident } from '@/services/api';
 import ResidentDialog from '@/components/crud/ResidentDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
+import { useRole } from '@/hooks/useRole';
 
 export default function ResidentsPage() {
+  const { can } = useRole();
   const [residents, setResidents] = useState<Resident[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -47,12 +49,16 @@ export default function ResidentsPage() {
       sortable: false,
       renderCell: (params) => (
         <Box>
-          <IconButton size="small" onClick={() => { setEditing(params.row as Resident); setDialogOpen(true); }}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
-            <DeleteIcon fontSize="small" />
-          </IconButton>
+          {can('resident:edit') && (
+            <IconButton size="small" onClick={() => { setEditing(params.row as Resident); setDialogOpen(true); }}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
+          {can('resident:delete') && (
+            <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
         </Box>
       ),
     },
@@ -68,9 +74,11 @@ export default function ResidentsPage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Residents</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
-          Add Resident
-        </Button>
+        {can('resident:create') && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            Add Resident
+          </Button>
+        )}
       </Box>
 
       <TextField

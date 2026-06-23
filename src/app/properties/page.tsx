@@ -9,8 +9,10 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getProperties, createProperty, updateProperty, deleteProperty, Property } from '@/services/api';
 import PropertyDialog from '@/components/crud/PropertyDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
+import { useRole } from '@/hooks/useRole';
 
 export default function PropertiesPage() {
+  const { can } = useRole();
   const [properties, setProperties] = useState<Property[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,12 +59,16 @@ export default function PropertiesPage() {
       sortable: false,
       renderCell: (params) => (
         <Box>
-          <IconButton size="small" onClick={() => { setEditing(params.row as Property); setDialogOpen(true); }}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
-            <DeleteIcon fontSize="small" />
-          </IconButton>
+          {can('property:write') && (
+            <IconButton size="small" onClick={() => { setEditing(params.row as Property); setDialogOpen(true); }}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
+          {can('property:write') && (
+            <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
         </Box>
       ),
     },
@@ -77,9 +83,11 @@ export default function PropertiesPage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Properties</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
-          Add Property
-        </Button>
+        {can('property:write') && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            Add Property
+          </Button>
+        )}
       </Box>
 
       <TextField
