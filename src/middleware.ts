@@ -1,11 +1,1 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)']);
-
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) await auth.protect();
-});
-
-export const config = {
-  matcher: ['/((?!_next|.*\\..*).*)'],
-};
+// Renamed to proxy.ts — Next.js 16 deprecates the middleware file convention.
