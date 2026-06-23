@@ -25,6 +25,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import BookOnlineIcon from '@mui/icons-material/BookOnline';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { UserButton } from '@clerk/nextjs';
 import appTheme from '@/theme';
 
 const DRAWER_WIDTH = 220;
@@ -80,6 +81,14 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </List>
+      <Box sx={{ mt: 'auto', p: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <UserButton
+          appearance={{ elements: { avatarBox: { width: 32, height: 32 } } }}
+        />
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+          Account
+        </Typography>
+      </Box>
     </>
   );
 }
