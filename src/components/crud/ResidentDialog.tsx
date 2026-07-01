@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import {
-  Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, TextField,
+  Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
+  Divider, FormControlLabel, Grid, TextField, Typography,
 } from '@mui/material';
 import { Resident } from '@/services/api';
 
@@ -10,6 +11,8 @@ type FormState = Omit<Resident, 'id'>;
 const empty: FormState = {
   fullName: '', email: '', telephone: '', nationality: '',
   personalId: '', iban: '', emergencyContact: '', source: '',
+  paymentDueDay: null, comments: '', delinquent: false,
+  hasObservation: false, observation: '',
 };
 
 interface Props {
@@ -30,6 +33,12 @@ export default function ResidentDialog({ open, initial, onClose, onSave }: Props
   const set = (field: keyof FormState, value: string) =>
     setForm(f => ({ ...f, [field]: value || null }));
 
+  const setNum = (field: keyof FormState, value: string) =>
+    setForm(f => ({ ...f, [field]: value ? Number(value) : null }));
+
+  const setBool = (field: keyof FormState, value: boolean) =>
+    setForm(f => ({ ...f, [field]: value }));
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -45,6 +54,7 @@ export default function ResidentDialog({ open, initial, onClose, onSave }: Props
       <DialogTitle>{initial ? 'Edit Resident' : 'New Resident'}</DialogTitle>
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
+          {/* Personal info */}
           <Grid size={{ xs: 12 }}>
             <TextField label="Full Name" value={form.fullName} onChange={e => set('fullName', e.target.value)} fullWidth required size="small" />
           </Grid>
@@ -66,9 +76,54 @@ export default function ResidentDialog({ open, initial, onClose, onSave }: Props
           <Grid size={{ xs: 12 }}>
             <TextField label="Emergency Contact" value={form.emergencyContact ?? ''} onChange={e => set('emergencyContact', e.target.value)} fullWidth size="small" />
           </Grid>
-          <Grid size={{ xs: 12 }}>
+          <Grid size={{ xs: 6 }}>
             <TextField label="Source" value={form.source ?? ''} onChange={e => set('source', e.target.value)} fullWidth size="small" />
           </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField
+              label="Payment Due Day"
+              value={form.paymentDueDay ?? ''}
+              onChange={e => setNum('paymentDueDay', e.target.value)}
+              fullWidth size="small" type="number"
+              slotProps={{ htmlInput: { min: 1, max: 31 } }}
+            />
+          </Grid>
+
+          <Grid size={{ xs: 12 }}>
+            <Divider sx={{ my: 0.5 }} />
+            <Typography variant="caption" color="text.secondary">Notes & Flags</Typography>
+          </Grid>
+
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              label="Comments"
+              value={form.comments ?? ''}
+              onChange={e => set('comments', e.target.value)}
+              fullWidth size="small" multiline rows={2}
+            />
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <FormControlLabel
+              control={<Checkbox checked={form.delinquent} onChange={e => setBool('delinquent', e.target.checked)} size="small" />}
+              label="Delinquent"
+            />
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <FormControlLabel
+              control={<Checkbox checked={form.hasObservation} onChange={e => setBool('hasObservation', e.target.checked)} size="small" />}
+              label="Has Observation"
+            />
+          </Grid>
+          {form.hasObservation && (
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Observation"
+                value={form.observation ?? ''}
+                onChange={e => set('observation', e.target.value)}
+                fullWidth size="small" multiline rows={2}
+              />
+            </Grid>
+          )}
         </Grid>
       </DialogContent>
       <DialogActions>
