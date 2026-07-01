@@ -23,6 +23,13 @@ import ApartmentIcon from '@mui/icons-material/Apartment';
 import BedIcon from '@mui/icons-material/Bed';
 import PeopleIcon from '@mui/icons-material/People';
 import BookOnlineIcon from '@mui/icons-material/BookOnline';
+import PersonIcon from '@mui/icons-material/Person';
+import HandymanIcon from '@mui/icons-material/Handyman';
+import EngineeringIcon from '@mui/icons-material/Engineering';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import PaymentsIcon from '@mui/icons-material/Payments';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import BusinessIcon from '@mui/icons-material/Business';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
@@ -32,11 +39,18 @@ const DRAWER_WIDTH = 220;
 const SIDEBAR_BG = '#424242';
 
 const navItems = [
-  { label: 'Dashboard',  href: '/dashboard',  icon: <DashboardIcon /> },
-  { label: 'Properties', href: '/properties', icon: <ApartmentIcon /> },
-  { label: 'Beds',       href: '/beds',       icon: <BedIcon /> },
-  { label: 'Residents',  href: '/residents',  icon: <PeopleIcon /> },
-  { label: 'Bookings',   href: '/bookings',   icon: <BookOnlineIcon /> },
+  { label: 'Dashboard',         href: '/dashboard',         icon: <DashboardIcon /> },
+  { label: 'Properties',        href: '/properties',        icon: <ApartmentIcon /> },
+  { label: 'Beds',              href: '/beds',              icon: <BedIcon /> },
+  { label: 'Residents',         href: '/residents',         icon: <PeopleIcon /> },
+  { label: 'Bookings',          href: '/bookings',          icon: <BookOnlineIcon /> },
+  { label: 'Landlords',         href: '/landlords',         icon: <PersonIcon /> },
+  { label: 'Service Providers', href: '/service-providers', icon: <EngineeringIcon /> },
+  { label: 'Maintenance',       href: '/maintenance',       icon: <HandymanIcon /> },
+  { label: 'Key Log',           href: '/key-logs',          icon: <VpnKeyIcon /> },
+  { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon /> },
+  { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon /> },
+  { label: 'Companies',         href: '/companies',         icon: <BusinessIcon /> },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {

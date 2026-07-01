@@ -53,6 +53,163 @@ export interface Property {
   internetStatus: string | null;
   internetContractEndDate: string | null;
   salesDescription: string | null;
+  landlordId: string | null;
+}
+
+export interface Landlord {
+  id: string;
+  name: string;
+  email: string | null;
+  address: string | null;
+  bankName: string | null;
+  sortCode: string | null;
+  accountNumber: string | null;
+  iban: string | null;
+  bic: string | null;
+  paymentReference: string | null;
+  paymentMethod: string | null;
+  payoutDay: number | null;
+  residentPaymentDueDay: number | null;
+  active: boolean;
+}
+
+export interface ServiceProvider {
+  id: string;
+  name: string;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  specialty: string | null;
+  notes: string | null;
+  active: boolean;
+}
+
+export interface MaintenanceTicket {
+  id: string;
+  orderNumber: string;
+  propertyId: string;
+  serviceProviderId: string | null;
+  title: string;
+  descriptionRequested: string | null;
+  additionalDetails: string | null;
+  descriptionDone: string | null;
+  materials: string | null;
+  priority: number;
+  urgency: string;
+  status: string;
+  clientName: string | null;
+  clientPhone: string | null;
+  approvedBy: string | null;
+  approvalDate: string | null;
+  chargedBy: string | null;
+  houseCompany: string | null;
+  maintenanceCost: number | null;
+  materialCost: number | null;
+  totalCost: number | null;
+  entryNoticeDate: string | null;
+  entryCheckIn: string | null;
+  entryCheckOut: string | null;
+  causedByResident: boolean;
+  tags: string[];
+  clerkUserId: string | null;
+  clerkUserName: string | null;
+}
+
+export interface TicketActivityLog {
+  id: string;
+  ticketId: string;
+  eventType: string;
+  clerkUserId: string | null;
+  clerkUserName: string | null;
+  comment: string | null;
+  field: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
+}
+
+export interface KeyLog {
+  id: string;
+  propertyId: string;
+  bedId: string | null;
+  keyType: string;
+  takenBy: string;
+  takenByType: string;
+  takenAt: string;
+  expectedReturnAt: string | null;
+  actualReturnAt: string | null;
+  returnStatus: string;
+  notes: string | null;
+}
+
+export interface RentPayment {
+  id: string;
+  residentId: string;
+  bookingId: string;
+  propertyId: string;
+  month: string;
+  paymentDueDay: number | null;
+  rentAmount: number;
+  amountPaid: number;
+  lateStatus: string;
+  notes: string | null;
+}
+
+export interface LandlordPayment {
+  id: string;
+  propertyId: string;
+  landlordId: string;
+  month: string;
+  amountDue: number;
+  amountPaid: number;
+  dateDue: string | null;
+  datePaid: string | null;
+  beneficiaryName: string | null;
+  iban: string | null;
+  bic: string | null;
+  paymentReference: string | null;
+  paymentMethod: string | null;
+  status: string;
+  notes: string | null;
+}
+
+export interface DepositTransaction {
+  id: string;
+  type: string;
+  residentId: string;
+  bookingId: string | null;
+  propertyId: string;
+  bedId: string | null;
+  residentName: string;
+  checkoutDate: string | null;
+  depositAmount: number;
+  proRataRentAmount: number | null;
+  iban: string | null;
+  payeeAddress: string | null;
+  status: string;
+  dateProcessed: string | null;
+  bankReference: string | null;
+  company: string | null;
+  comments: string | null;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  address: string | null;
+  contactEmail: string | null;
+  phone: string | null;
+  active: boolean;
+}
+
+export interface DelinquencyRow {
+  residentName: string;
+  propertyCode: string;
+  fullAddress: string;
+  rentAmount: number;
+  amountPaid: number;
+  amountDue: number;
+  lateStatus: string;
 }
 
 export interface Resident {
@@ -144,3 +301,79 @@ export const updateBooking = (id: string, data: Partial<Omit<Booking, 'resident'
   api.put<Booking>(`/bookings/${id}`, data).then(r => r.data);
 export const deleteBooking = (id: string) =>
   api.delete(`/bookings/${id}`);
+
+// Landlords
+export const getLandlords = () => api.get<Landlord[]>('/landlords').then(r => r.data);
+export const createLandlord = (data: Omit<Landlord, 'id' | 'active'>) => api.post<Landlord>('/landlords', data).then(r => r.data);
+export const updateLandlord = (id: string, data: Partial<Landlord>) => api.put<Landlord>(`/landlords/${id}`, data).then(r => r.data);
+export const deleteLandlord = (id: string) => api.delete(`/landlords/${id}`);
+
+// Service Providers
+export const getServiceProviders = () => api.get<ServiceProvider[]>('/service-providers').then(r => r.data);
+export const createServiceProvider = (data: Omit<ServiceProvider, 'id' | 'active'>) => api.post<ServiceProvider>('/service-providers', data).then(r => r.data);
+export const updateServiceProvider = (id: string, data: Partial<ServiceProvider>) => api.put<ServiceProvider>(`/service-providers/${id}`, data).then(r => r.data);
+export const deleteServiceProvider = (id: string) => api.delete(`/service-providers/${id}`);
+
+// Maintenance Tickets
+export const getMaintenanceTickets = (params?: { propertyId?: string; status?: string; urgency?: string }) =>
+  api.get<MaintenanceTicket[]>('/maintenance-tickets', { params }).then(r => r.data);
+export const createMaintenanceTicket = (data: Omit<MaintenanceTicket, 'id' | 'orderNumber'>) =>
+  api.post<MaintenanceTicket>('/maintenance-tickets', data).then(r => r.data);
+export const updateMaintenanceTicket = (id: string, data: Partial<MaintenanceTicket>) =>
+  api.put<MaintenanceTicket>(`/maintenance-tickets/${id}`, data).then(r => r.data);
+export const deleteMaintenanceTicket = (id: string) => api.delete(`/maintenance-tickets/${id}`);
+export const getTicketActivity = (ticketId: string) =>
+  api.get<TicketActivityLog[]>(`/maintenance-tickets/${ticketId}/activity`).then(r => r.data);
+export const addTicketActivity = (ticketId: string, data: Partial<TicketActivityLog>) =>
+  api.post<TicketActivityLog>(`/maintenance-tickets/${ticketId}/activity`, data).then(r => r.data);
+
+// Key Logs
+export const getKeyLogs = (propertyId?: string) =>
+  api.get<KeyLog[]>('/key-logs', { params: propertyId ? { propertyId } : {} }).then(r => r.data);
+export const createKeyLog = (data: Omit<KeyLog, 'id'>) => api.post<KeyLog>('/key-logs', data).then(r => r.data);
+export const updateKeyLog = (id: string, data: Partial<KeyLog>) => api.put<KeyLog>(`/key-logs/${id}`, data).then(r => r.data);
+export const deleteKeyLog = (id: string) => api.delete(`/key-logs/${id}`);
+
+// Checkout
+export const checkout = (data: { bookingId: string; checkoutDate: string; keysReturned?: boolean; inspectionNotes?: string | null; depositRefundAmount?: number | null; refundIban?: string | null; proRataRentAmount?: number | null; newResidentLinked?: boolean; newResidentId?: string | null; notes?: string | null; residentName?: string; propertyId?: string; residentId?: string; bedId?: string | null; company?: string | null }) =>
+  api.post('/checkout', data).then(r => r.data);
+
+// Rent Payments
+export const getRentPayments = (params?: { propertyId?: string; month?: string; residentId?: string }) =>
+  api.get<RentPayment[]>('/rent-payments', { params }).then(r => r.data);
+export const createRentPayment = (data: Omit<RentPayment, 'id'>) => api.post<RentPayment>('/rent-payments', data).then(r => r.data);
+export const updateRentPayment = (id: string, data: Partial<RentPayment>) => api.put<RentPayment>(`/rent-payments/${id}`, data).then(r => r.data);
+export const deleteRentPayment = (id: string) => api.delete(`/rent-payments/${id}`);
+export const addRentInstallment = (rentPaymentId: string, data: { amount: number; paidAt: string; notes?: string | null }) =>
+  api.post(`/rent-payments/${rentPaymentId}/installments`, data).then(r => r.data);
+
+// Landlord Payments
+export const getLandlordPayments = (params?: { propertyId?: string; landlordId?: string; month?: string }) =>
+  api.get<LandlordPayment[]>('/landlord-payments', { params }).then(r => r.data);
+export const createLandlordPayment = (data: Omit<LandlordPayment, 'id'>) => api.post<LandlordPayment>('/landlord-payments', data).then(r => r.data);
+export const updateLandlordPayment = (id: string, data: Partial<LandlordPayment>) => api.put<LandlordPayment>(`/landlord-payments/${id}`, data).then(r => r.data);
+export const deleteLandlordPayment = (id: string) => api.delete(`/landlord-payments/${id}`);
+
+// Deposit Transactions
+export const getDepositTransactions = (params?: { propertyId?: string; type?: string; status?: string }) =>
+  api.get<DepositTransaction[]>('/deposit-transactions', { params }).then(r => r.data);
+export const createDepositTransaction = (data: Omit<DepositTransaction, 'id'>) => api.post<DepositTransaction>('/deposit-transactions', data).then(r => r.data);
+export const updateDepositTransaction = (id: string, data: Partial<DepositTransaction>) => api.put<DepositTransaction>(`/deposit-transactions/${id}`, data).then(r => r.data);
+export const deleteDepositTransaction = (id: string) => api.delete(`/deposit-transactions/${id}`);
+
+// Companies
+export const getCompanies = () => api.get<Company[]>('/companies').then(r => r.data);
+export const createCompany = (data: Omit<Company, 'id' | 'active'>) => api.post<Company>('/companies', data).then(r => r.data);
+export const updateCompany = (id: string, data: Partial<Company>) => api.put<Company>(`/companies/${id}`, data).then(r => r.data);
+export const deleteCompany = (id: string) => api.delete(`/companies/${id}`);
+
+// Reports
+export const getDelinquencyReport = (params?: { propertyId?: string; month?: string }) =>
+  api.get<DelinquencyRow[]>('/reports/delinquency', { params }).then(r => r.data);
+export const exportDelinquencyReportCsv = (params?: { propertyId?: string; month?: string }) =>
+  api.get('/reports/delinquency', { params: { ...params, format: 'csv' }, responseType: 'blob' }).then(r => {
+    const url = URL.createObjectURL(r.data);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'delinquency-report.csv'; a.click();
+    URL.revokeObjectURL(url);
+  });
