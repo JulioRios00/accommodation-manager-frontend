@@ -22,6 +22,7 @@ const empty: FormState = {
   internetUsername: '', internetPassword: '', internetPaymentType: '',
   internetStatus: '', internetContractEndDate: '',
   salesDescription: '',
+  landlordId: null,
 };
 
 const statusOptions = ['', 'Pre', 'Active', 'Inactive'];

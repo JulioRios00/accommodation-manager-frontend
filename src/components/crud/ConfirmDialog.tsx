@@ -3,15 +3,16 @@ import { Button, Dialog, DialogActions, DialogContent, DialogContentText, Dialog
 
 interface Props {
   open: boolean;
+  title?: string;
   message: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 }
 
-export default function ConfirmDialog({ open, message, onConfirm, onCancel }: Props) {
+export default function ConfirmDialog({ open, title, message, onConfirm, onCancel }: Props) {
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
-      <DialogTitle>Confirm</DialogTitle>
+      <DialogTitle>{title ?? 'Confirm'}</DialogTitle>
       <DialogContent>
         <DialogContentText>{message}</DialogContentText>
       </DialogContent>
