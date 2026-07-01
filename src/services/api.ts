@@ -22,12 +22,37 @@ export interface Property {
   bu: string;
   area: string | null;
   fullAddress: string | null;
-  officeKeys: boolean;
+  officeKeysCount: number;
   keysCount: number;
   securityKeysCount: number;
   fobCount: number;
+  keyCode: string | null;
   electricityStatus: string | null;
+  electricityMprn: string | null;
+  electricitySupplier: string | null;
+  electricityAccountNumber: string | null;
+  electricityKeypadCode: string | null;
   gasStatus: string | null;
+  gasGprn: string | null;
+  gasSupplier: string | null;
+  gasAccountNumber: string | null;
+  gasPin: string | null;
+  wasteSupplier: string | null;
+  wasteAccountNumber: string | null;
+  wasteEmail: string | null;
+  wastePassword: string | null;
+  wastePaymentType: string | null;
+  wasteMonthlyAmount: number | null;
+  wasteStatus: string | null;
+  internetSupplier: string | null;
+  internetAccountNumber: string | null;
+  internetEmail: string | null;
+  internetUsername: string | null;
+  internetPassword: string | null;
+  internetPaymentType: string | null;
+  internetStatus: string | null;
+  internetContractEndDate: string | null;
+  salesDescription: string | null;
 }
 
 export interface Resident {

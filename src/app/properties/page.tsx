@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment } from '@mui/material';
+import { Typography, Box, Button, IconButton, TextField, InputAdornment } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -42,16 +42,9 @@ export default function PropertiesPage() {
     { field: 'fullAddress', headerName: 'Address', minWidth: 200, flex: 1 },
     { field: 'electricityStatus', headerName: 'Electricity', width: 110 },
     { field: 'gasStatus', headerName: 'Gas', width: 90 },
+    { field: 'officeKeysCount', headerName: 'Office Keys', width: 90, type: 'number' },
     { field: 'keysCount', headerName: 'Keys', width: 75, type: 'number' },
     { field: 'fobCount', headerName: 'Fobs', width: 75, type: 'number' },
-    {
-      field: 'officeKeys',
-      headerName: 'Office Keys',
-      width: 110,
-      renderCell: (params) => (
-        <Chip label={params.value ? 'Yes' : 'No'} color={params.value ? 'success' : 'default'} size="small" />
-      ),
-    },
     {
       field: 'actions',
       headerName: '',
