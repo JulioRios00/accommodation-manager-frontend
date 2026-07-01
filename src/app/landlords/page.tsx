@@ -67,7 +67,7 @@ export default function LandlordsPage() {
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Typography variant="h5" fontWeight={700} sx={{ flexGrow: 1 }}>Landlords</Typography>
+        <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Landlords</Typography>
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
         {can('property:write') && (

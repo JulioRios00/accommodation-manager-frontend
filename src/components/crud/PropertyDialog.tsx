@@ -99,7 +99,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
         {/* Keys */}
         <Accordion defaultExpanded disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={600}>Key Inventory</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Key Inventory</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
@@ -123,7 +123,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
         {/* Electricity */}
         <Accordion disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={600}>Electricity</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Electricity</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
@@ -139,7 +139,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
         {/* Gas */}
         <Accordion disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={600}>Gas</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Gas</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
@@ -155,7 +155,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
         {/* Waste / Bin */}
         <Accordion disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={600}>Waste / Bin</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Waste / Bin</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
@@ -175,7 +175,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
         {/* Internet */}
         <Accordion disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={600}>Internet / Broadband</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Internet / Broadband</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
@@ -196,7 +196,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
         {/* Sales */}
         <Accordion disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={600}>Sales Description</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Sales Description</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <TextField

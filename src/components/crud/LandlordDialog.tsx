@@ -54,7 +54,7 @@ export default function LandlordDialog({ open, initial, onClose, onSave }: Props
 
         <Accordion defaultExpanded disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={600}>Bank Details</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Bank Details</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
@@ -67,7 +67,7 @@ export default function LandlordDialog({ open, initial, onClose, onSave }: Props
 
         <Accordion disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={600}>Payment Settings</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Payment Settings</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>

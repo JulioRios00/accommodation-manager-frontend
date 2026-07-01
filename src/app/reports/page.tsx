@@ -49,7 +49,7 @@ export default function ReportsPage() {
     { field: 'rentAmount', headerName: 'Rent (€)', width: 100, type: 'number' },
     { field: 'amountPaid', headerName: 'Paid (€)', width: 100, type: 'number' },
     { field: 'amountDue', headerName: 'Due (€)', width: 100, type: 'number',
-      renderCell: (p) => <Typography color="error" fontWeight={600}>{Number(p.value).toFixed(2)}</Typography> },
+      renderCell: (p) => <Typography color="error" sx={{ fontWeight: 600 }}>{Number(p.value).toFixed(2)}</Typography> },
     { field: 'lateStatus', headerName: 'Status', width: 150,
       renderCell: (p) => {
         const color = p.value === 'overdue' ? 'error' : p.value === 'final_demand_d4' ? 'warning' : 'default';
@@ -61,7 +61,7 @@ export default function ReportsPage() {
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-        <Typography variant="h5" fontWeight={700} sx={{ flexGrow: 1 }}>Delinquency Report</Typography>
+        <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Delinquency Report</Typography>
         <TextField size="small" label="Property ID" value={propertyId} onChange={e => setPropertyId(e.target.value)} sx={{ width: 200 }} />
         <TextField size="small" label="Month (YYYY-MM)" value={month} onChange={e => setMonth(e.target.value)} sx={{ width: 160 }} />
         <Button variant="contained" onClick={handleSearch} disabled={loading}>

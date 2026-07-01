@@ -60,7 +60,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
         </Grid>
 
         <Accordion defaultExpanded disableGutters>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}><Typography variant="body2" fontWeight={600}>Description</Typography></AccordionSummary>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}><Typography variant="body2" sx={{ fontWeight: 600 }}>Description</Typography></AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 }}><TextField label="Description Requested" value={form.descriptionRequested ?? ''} onChange={e => set('descriptionRequested', e.target.value)} fullWidth size="small" multiline rows={3} /></Grid>
@@ -73,7 +73,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
         </Accordion>
 
         <Accordion disableGutters>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}><Typography variant="body2" fontWeight={600}>Client & Costs</Typography></AccordionSummary>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}><Typography variant="body2" sx={{ fontWeight: 600 }}>Client & Costs</Typography></AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
               {tf('Client Name', 'clientName')} {tf('Client Phone', 'clientPhone')}
@@ -86,7 +86,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
         </Accordion>
 
         <Accordion disableGutters>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}><Typography variant="body2" fontWeight={600}>Approval & Entry</Typography></AccordionSummary>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}><Typography variant="body2" sx={{ fontWeight: 600 }}>Approval & Entry</Typography></AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
               {tf('Approved By', 'approvedBy')}
