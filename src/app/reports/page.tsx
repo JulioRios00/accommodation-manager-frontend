@@ -6,7 +6,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getDelinquencyReport, DelinquencyRow } from '@/services/api';
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const BASE = process.env.NEXT_PUBLIC_API_URL || ''; // empty = relative URL, handled by Vercel rewrites
 
 export default function ReportsPage() {
   const [rows, setRows] = useState<DelinquencyRow[]>([]);

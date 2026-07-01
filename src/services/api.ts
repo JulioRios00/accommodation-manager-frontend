@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api` });
+// On Vercel (prod & preview), NEXT_PUBLIC_API_URL is empty → use relative /api
+// so Vercel rewrites proxy to the backend on the same deployment's origin.
+// Locally, set NEXT_PUBLIC_API_URL=http://localhost:3001 in .env.local.
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api` : '/api',
+});
 
 api.interceptors.request.use(async (config) => {
   const token = await (window as any).Clerk?.session?.getToken();
