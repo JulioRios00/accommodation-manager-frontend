@@ -41,6 +41,10 @@ interface Props {
 }
 
 export default function BookingDialog({ open, initial, beds, residents, onClose, onSave }: Props) {
+  const availableBeds = initial
+    ? beds.filter(b => b.status === 'vacant' || b.id === initial.bedId)
+    : beds.filter(b => b.status === 'vacant');
+
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
 
@@ -85,7 +89,7 @@ export default function BookingDialog({ open, initial, beds, residents, onClose,
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           <Grid size={{ xs: 12 }}>
             <TextField select label="Bed" value={form.bedId} onChange={e => set('bedId', e.target.value)} fullWidth required size="small">
-              {beds.map(b => (
+              {availableBeds.map(b => (
                 <MenuItem key={b.id} value={b.id}>
                   {b.propertyCode}-{b.bedNumber} ({b.bedroomType})
                 </MenuItem>
@@ -138,7 +142,7 @@ export default function BookingDialog({ open, initial, beds, residents, onClose,
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained" disabled={saving || !form.bedId || !form.residentId}>
+        <Button onClick={handleSave} variant="contained" disabled={saving || !form.bedId || !form.residentId || !form.checkInDate || !form.contractEndDate}>
           {saving ? 'Saving…' : 'Save'}
         </Button>
       </DialogActions>

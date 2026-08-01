@@ -2,14 +2,16 @@
 import { useEffect, useState } from 'react';
 import {
   Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
-  Divider, FormControlLabel, Grid, TextField, Typography,
+  Divider, FormControlLabel, Grid, MenuItem, TextField, Typography,
 } from '@mui/material';
 import { Resident } from '@/services/api';
 
 type FormState = Omit<Resident, 'id'>;
 
+const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
+
 const empty: FormState = {
-  fullName: '', email: '', telephone: '', nationality: '',
+  clerkUserId: null, fullName: '', email: '', telephone: '', gender: null, nationality: '',
   personalId: '', iban: '', emergencyContact: '', source: '',
   paymentDueDay: null, comments: '', delinquent: false,
   hasObservation: false, observation: '',
@@ -58,11 +60,26 @@ export default function ResidentDialog({ open, initial, onClose, onSave }: Props
           <Grid size={{ xs: 12 }}>
             <TextField label="Full Name" value={form.fullName} onChange={e => set('fullName', e.target.value)} fullWidth required size="small" />
           </Grid>
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              label="Clerk User ID (portal access)"
+              value={form.clerkUserId ?? ''}
+              onChange={e => set('clerkUserId', e.target.value)}
+              fullWidth size="small"
+              placeholder="user_xxxxxxxxxxxx — paste from Clerk dashboard"
+            />
+          </Grid>
           <Grid size={{ xs: 6 }}>
             <TextField label="Email" value={form.email ?? ''} onChange={e => set('email', e.target.value)} fullWidth size="small" type="email" />
           </Grid>
           <Grid size={{ xs: 6 }}>
             <TextField label="Telephone" value={form.telephone ?? ''} onChange={e => set('telephone', e.target.value)} fullWidth size="small" />
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField select label="Gender" value={form.gender ?? ''} onChange={e => set('gender', e.target.value)} fullWidth size="small">
+              <MenuItem value=""><em>—</em></MenuItem>
+              {GENDER_OPTIONS.map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
+            </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}>
             <TextField label="Nationality" value={form.nationality ?? ''} onChange={e => set('nationality', e.target.value)} fullWidth size="small" />
