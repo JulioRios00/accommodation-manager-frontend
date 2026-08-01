@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField } from '@mui/material';
-import { KeyLog } from '@/services/api';
+import { KeyLog, Property, getProperties } from '@/services/api';
 
 type FormState = Omit<KeyLog, 'id'>;
 const empty: FormState = {
@@ -18,10 +18,12 @@ interface Props {
 export default function KeyLogDialog({ open, initial, onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
+  const [properties, setProperties] = useState<Property[]>([]);
 
   useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
-  const set = (f: keyof FormState, v: unknown) => setForm(prev => ({ ...prev, [f]: v === '' ? null : v }));
+  useEffect(() => { if (open) getProperties().then(setProperties).catch(() => {}); }, [open]);
 
+  const set = (f: keyof FormState, v: unknown) => setForm(prev => ({ ...prev, [f]: v === '' ? null : v }));
   const handleSave = async () => {
     setSaving(true);
     try { await onSave(form, initial?.id); onClose(); } finally { setSaving(false); }
@@ -32,7 +34,11 @@ export default function KeyLogDialog({ open, initial, onClose, onSave }: Props) 
       <DialogTitle>{initial ? 'Edit Key Log' : 'Log Key'}</DialogTitle>
       <DialogContent dividers sx={{ p: 2 }}>
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12 }}><TextField label="Property ID" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small" /></Grid>
+          <Grid size={{ xs: 12 }}>
+            <TextField select label="Property" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small">
+              {properties.map(p => <MenuItem key={p.id} value={p.id}>{p.code}{p.fullAddress ? ` — ${p.fullAddress}` : ''}</MenuItem>)}
+            </TextField>
+          </Grid>
           <Grid size={{ xs: 6 }}>
             <TextField select label="Key Type" value={form.keyType} onChange={e => set('keyType', e.target.value)} fullWidth size="small">
               {['office', 'resident', 'security', 'fob'].map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}

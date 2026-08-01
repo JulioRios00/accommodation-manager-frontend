@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField } from '@mui/material';
-import { LandlordPayment } from '@/services/api';
+import { LandlordPayment, Property, Landlord, getProperties, getLandlords } from '@/services/api';
 
 type FormState = Omit<LandlordPayment, 'id'>;
 const empty: FormState = { propertyId: '', landlordId: '', month: '', amountDue: 0, amountPaid: 0, dateDue: null, datePaid: null, beneficiaryName: null, iban: null, bic: null, paymentReference: null, paymentMethod: null, status: 'pending', notes: null };
@@ -11,16 +11,34 @@ interface Props { open: boolean; initial?: LandlordPayment | null; onClose: () =
 export default function LandlordPaymentDialog({ open, initial, onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [landlords, setLandlords] = useState<Landlord[]>([]);
+
   useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
+  useEffect(() => {
+    if (!open) return;
+    getProperties().then(setProperties).catch(() => {});
+    getLandlords().then(setLandlords).catch(() => {});
+  }, [open]);
+
   const set = (f: keyof FormState, v: unknown) => setForm(prev => ({ ...prev, [f]: v === '' ? null : v }));
   const handleSave = async () => { setSaving(true); try { await onSave(form, initial?.id); onClose(); } finally { setSaving(false); } };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial ? 'Edit Landlord Payment' : 'New Landlord Payment'}</DialogTitle>
       <DialogContent dividers sx={{ p: 2 }}>
         <Grid container spacing={2}>
-          <Grid size={{ xs: 6 }}><TextField label="Property ID" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small" /></Grid>
-          <Grid size={{ xs: 6 }}><TextField label="Landlord ID" value={form.landlordId} onChange={e => set('landlordId', e.target.value)} fullWidth required size="small" /></Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField select label="Property" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small">
+              {properties.map(p => <MenuItem key={p.id} value={p.id}>{p.code}{p.fullAddress ? ` — ${p.fullAddress}` : ''}</MenuItem>)}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField select label="Landlord" value={form.landlordId} onChange={e => set('landlordId', e.target.value)} fullWidth required size="small">
+              {landlords.map(l => <MenuItem key={l.id} value={l.id}>{l.name}</MenuItem>)}
+            </TextField>
+          </Grid>
           <Grid size={{ xs: 6 }}><TextField label="Month (YYYY-MM)" value={form.month} onChange={e => set('month', e.target.value)} fullWidth required size="small" /></Grid>
           <Grid size={{ xs: 3 }}><TextField label="Amount Due (€)" type="number" value={form.amountDue} onChange={e => set('amountDue', +e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 3 }}><TextField label="Amount Paid (€)" type="number" value={form.amountPaid} onChange={e => set('amountPaid', +e.target.value)} fullWidth size="small" /></Grid>

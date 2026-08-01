@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, MenuItem } from '@mui/material';
+import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, MenuItem, Select, SelectChangeEvent } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -35,11 +35,55 @@ export default function MaintenancePage() {
     await load();
   };
 
+  const handleStatusChange = async (ticket: MaintenanceTicket, newStatus: string) => {
+    setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, status: newStatus as MaintenanceTicket['status'] } : t));
+    await updateMaintenanceTicket(ticket.id, { ...ticket, status: newStatus as MaintenanceTicket['status'] });
+  };
+
+  const handleUrgencyChange = async (ticket: MaintenanceTicket, newUrgency: string) => {
+    setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, urgency: newUrgency } : t));
+    await updateMaintenanceTicket(ticket.id, { ...ticket, urgency: newUrgency });
+  };
+
   const columns: GridColDef[] = [
     { field: 'orderNumber', headerName: 'Order #', width: 100 },
     { field: 'title', headerName: 'Title', minWidth: 200, flex: 1 },
-    { field: 'urgency', headerName: 'Urgency', width: 100, renderCell: (p) => <Chip label={p.value} color={urgencyColor[p.value as string] ?? 'default'} size="small" /> },
-    { field: 'status', headerName: 'Status', width: 120, renderCell: (p) => <Chip label={p.value} color={statusColor[p.value as string] ?? 'default'} size="small" /> },
+    {
+      field: 'urgency', headerName: 'Urgency', width: 140,
+      renderCell: (p) => can('property:write') ? (
+        <Select
+          value={p.value as string}
+          onChange={(e: SelectChangeEvent) => handleUrgencyChange(p.row as MaintenanceTicket, e.target.value)}
+          size="small"
+          variant="outlined"
+          onClick={ev => ev.stopPropagation()}
+          sx={{ fontSize: 13, height: 28, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' } }}
+          renderValue={(v) => <Chip label={v} color={urgencyColor[v] ?? 'default'} size="small" sx={{ pointerEvents: 'none' }} />}
+        >
+          {['Low', 'Middle', 'High'].map(u => (
+            <MenuItem key={u} value={u}><Chip label={u} color={urgencyColor[u] ?? 'default'} size="small" /></MenuItem>
+          ))}
+        </Select>
+      ) : <Chip label={p.value} color={urgencyColor[p.value as string] ?? 'default'} size="small" />,
+    },
+    {
+      field: 'status', headerName: 'Status', width: 160,
+      renderCell: (p) => can('property:write') ? (
+        <Select
+          value={p.value as string}
+          onChange={(e: SelectChangeEvent) => handleStatusChange(p.row as MaintenanceTicket, e.target.value)}
+          size="small"
+          variant="outlined"
+          onClick={ev => ev.stopPropagation()}
+          sx={{ fontSize: 13, height: 28, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' } }}
+          renderValue={(v) => <Chip label={v} color={statusColor[v] ?? 'default'} size="small" sx={{ pointerEvents: 'none' }} />}
+        >
+          {['open', 'in_progress', 'completed', 'cancelled'].map(s => (
+            <MenuItem key={s} value={s}><Chip label={s} color={statusColor[s] ?? 'default'} size="small" /></MenuItem>
+          ))}
+        </Select>
+      ) : <Chip label={p.value} color={statusColor[p.value as string] ?? 'default'} size="small" />,
+    },
     { field: 'clientName', headerName: 'Client', width: 150 },
     { field: 'totalCost', headerName: 'Total (€)', width: 100, type: 'number' },
     {

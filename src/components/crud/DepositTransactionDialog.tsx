@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField } from '@mui/material';
-import { DepositTransaction } from '@/services/api';
+import { DepositTransaction, Property, Resident, getProperties, getResidents } from '@/services/api';
 
 type FormState = Omit<DepositTransaction, 'id'>;
 const empty: FormState = { type: 'receipt', residentId: '', bookingId: null, propertyId: '', bedId: null, residentName: '', checkoutDate: null, depositAmount: 0, proRataRentAmount: null, iban: null, payeeAddress: null, status: 'pending', dateProcessed: null, bankReference: null, company: null, comments: null };
@@ -11,9 +11,25 @@ interface Props { open: boolean; initial?: DepositTransaction | null; onClose: (
 export default function DepositTransactionDialog({ open, initial, onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
+
   useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
+  useEffect(() => {
+    if (!open) return;
+    getProperties().then(setProperties).catch(() => {});
+    getResidents().then(setResidents).catch(() => {});
+  }, [open]);
+
   const set = (f: keyof FormState, v: unknown) => setForm(prev => ({ ...prev, [f]: v === '' ? null : v }));
+
+  const selectResident = (id: string) => {
+    const r = residents.find(r => r.id === id);
+    setForm(prev => ({ ...prev, residentId: id, residentName: r?.fullName ?? prev.residentName }));
+  };
+
   const handleSave = async () => { setSaving(true); try { await onSave(form, initial?.id); onClose(); } finally { setSaving(false); } };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial ? 'Edit Deposit Transaction' : 'New Deposit Transaction'}</DialogTitle>
@@ -24,9 +40,17 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
               {['receipt', 'refund'].map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 8 }}><TextField label="Resident Name" value={form.residentName} onChange={e => set('residentName', e.target.value)} fullWidth required size="small" /></Grid>
-          <Grid size={{ xs: 6 }}><TextField label="Resident ID" value={form.residentId} onChange={e => set('residentId', e.target.value)} fullWidth required size="small" /></Grid>
-          <Grid size={{ xs: 6 }}><TextField label="Property ID" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small" /></Grid>
+          <Grid size={{ xs: 8 }}>
+            <TextField select label="Resident" value={form.residentId} onChange={e => selectResident(e.target.value)} fullWidth required size="small">
+              {residents.map(r => <MenuItem key={r.id} value={r.id}>{r.fullName}</MenuItem>)}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField select label="Property" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small">
+              {properties.map(p => <MenuItem key={p.id} value={p.id}>{p.code}{p.fullAddress ? ` — ${p.fullAddress}` : ''}</MenuItem>)}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 6 }}><TextField label="Resident Name" value={form.residentName} onChange={e => set('residentName', e.target.value)} fullWidth required size="small" /></Grid>
           <Grid size={{ xs: 4 }}><TextField label="Deposit Amount (€)" type="number" value={form.depositAmount} onChange={e => set('depositAmount', +e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 4 }}><TextField label="Pro-rata Rent (€)" type="number" value={form.proRataRentAmount ?? ''} onChange={e => set('proRataRentAmount', e.target.value ? +e.target.value : null)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 4 }}>

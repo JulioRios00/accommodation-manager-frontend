@@ -30,6 +30,7 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import BusinessIcon from '@mui/icons-material/Business';
+import UploadIcon from '@mui/icons-material/Upload';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
@@ -51,6 +52,7 @@ const navItems = [
   { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon /> },
   { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon /> },
   { label: 'Companies',         href: '/companies',         icon: <BusinessIcon /> },
+  { label: 'Import Data',       href: '/import',            icon: <UploadIcon /> },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {

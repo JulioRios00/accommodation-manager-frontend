@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
   async rewrites() {
     // BACKEND_URL is a server-side-only Vercel env var (no NEXT_PUBLIC_ prefix).
     // Falls back to Render if not set, so local dev and Render deployments keep working.

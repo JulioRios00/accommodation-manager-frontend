@@ -1,12 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Typography, Box, Button, IconButton, TextField, InputAdornment } from '@mui/material';
+import { Typography, Box, Button, IconButton, TextField, InputAdornment, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
+import Link from 'next/link';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { getProperties, createProperty, updateProperty, deleteProperty, Property } from '@/services/api';
+import { getProperties, getBedrooms, createProperty, updateProperty, deleteProperty, Property, Bedroom } from '@/services/api';
 import PropertyDialog from '@/components/crud/PropertyDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -14,12 +16,16 @@ import { useRole } from '@/hooks/useRole';
 export default function PropertiesPage() {
   const { can } = useRole();
   const [properties, setProperties] = useState<Property[]>([]);
+  const [bedrooms, setBedrooms] = useState<Bedroom[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const load = () => getProperties().then(setProperties).catch(() => {});
+  const load = () => {
+    getProperties().then(setProperties).catch(() => {});
+    getBedrooms().then(setBedrooms).catch(() => {});
+  };
   useEffect(() => { load(); }, []);
 
   const handleSave = async (data: Omit<Property, 'id'>, id?: string) => {
@@ -40,6 +46,13 @@ export default function PropertiesPage() {
     { field: 'bu', headerName: 'BU', width: 70 },
     { field: 'area', headerName: 'Area', width: 120 },
     { field: 'fullAddress', headerName: 'Address', minWidth: 200, flex: 1 },
+    {
+      field: 'bedroomCount',
+      headerName: 'Bedrooms',
+      width: 95,
+      type: 'number',
+      valueGetter: (_v, row) => bedrooms.filter(b => b.propertyId === (row as Property).id).length,
+    },
     { field: 'electricityStatus', headerName: 'Electricity', width: 110 },
     { field: 'gasStatus', headerName: 'Gas', width: 90 },
     { field: 'officeKeysCount', headerName: 'Office Keys', width: 90, type: 'number' },
@@ -48,10 +61,15 @@ export default function PropertiesPage() {
     {
       field: 'actions',
       headerName: '',
-      width: 90,
+      width: 120,
       sortable: false,
       renderCell: (params) => (
         <Box>
+          <Tooltip title="Manage Inventory">
+            <IconButton size="small" component={Link} href={`/properties/${params.row.id}/inventory`}>
+              <MeetingRoomIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           {can('property:write') && (
             <IconButton size="small" onClick={() => { setEditing(params.row as Property); setDialogOpen(true); }}>
               <EditIcon fontSize="small" />

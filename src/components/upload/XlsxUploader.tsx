@@ -5,10 +5,13 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { importXlsx } from '@/services/api';
 
 interface XlsxUploaderProps {
-  onImported: () => void;
+  onImported?: () => void;
+  endpoint?: string;
+  label?: string;
+  accept?: string;
 }
 
-export default function XlsxUploader({ onImported }: XlsxUploaderProps) {
+export default function XlsxUploader({ onImported, endpoint, label, accept = '.xlsx,.xlsm' }: XlsxUploaderProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -17,9 +20,9 @@ export default function XlsxUploader({ onImported }: XlsxUploaderProps) {
     setLoading(true);
     setMessage(null);
     try {
-      const result = await importXlsx(file);
+      const result = await importXlsx(file, endpoint);
       setMessage({ type: 'success', text: result.message });
-      onImported();
+      onImported?.();
     } catch {
       setMessage({ type: 'error', text: 'Failed to import file. Please try again.' });
     } finally {
@@ -50,12 +53,12 @@ export default function XlsxUploader({ onImported }: XlsxUploaderProps) {
       >
         <UploadFileIcon sx={{ fontSize: 40, color: '#1a237e' }} />
         <Typography variant="body1" sx={{ mt: 1 }}>
-          Drag & drop an XLSX file here, or click to select
+          {label ?? 'Drag & drop an XLSX file here, or click to select'}
         </Typography>
         <input
           ref={inputRef}
           type="file"
-          accept=".xlsx"
+          accept={accept}
           hidden
           onChange={(e) => {
             const file = e.target.files?.[0];

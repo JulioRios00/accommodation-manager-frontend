@@ -2,14 +2,15 @@
 import { useEffect, useState } from 'react';
 import { Accordion, AccordionDetails, AccordionSummary, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Grid, MenuItem, TextField, Typography } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { MaintenanceTicket } from '@/services/api';
+import { MaintenanceTicket, Property, getProperties } from '@/services/api';
 
 type FormState = Omit<MaintenanceTicket, 'id' | 'orderNumber'>;
 
 const empty: FormState = {
   propertyId: '', serviceProviderId: null, title: '', descriptionRequested: null, additionalDetails: null,
   descriptionDone: null, materials: null, priority: 0, urgency: 'Low', status: 'open',
-  clientName: null, clientPhone: null, approvedBy: null, approvalDate: null, chargedBy: null,
+  timeframe: null, clientName: null, clientPhone: null,
+  approvedBy: null, approvalDate: null, paymentApprovedBy: null, chargedBy: null,
   houseCompany: null, maintenanceCost: null, materialCost: null, totalCost: null,
   entryNoticeDate: null, entryCheckIn: null, entryCheckOut: null, causedByResident: false,
   tags: [], clerkUserId: null, clerkUserName: null,
@@ -23,8 +24,10 @@ interface Props {
 export default function MaintenanceTicketDialog({ open, initial, onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
+  const [properties, setProperties] = useState<Property[]>([]);
 
   useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
+  useEffect(() => { if (open) getProperties().then(setProperties).catch(() => {}); }, [open]);
   const set = (field: keyof FormState, v: unknown) => setForm(f => ({ ...f, [field]: v === '' ? null : v }));
 
   const handleSave = async () => {
@@ -51,10 +54,21 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
               {['Low', 'Middle', 'High'].map(u => <MenuItem key={u} value={u}>{u}</MenuItem>)}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 9 }}>{tf('Property ID', 'propertyId', 12)}</Grid>
+          <Grid size={{ xs: 9 }}>
+            <TextField select label="Property" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small">
+              {properties.map(p => (
+                <MenuItem key={p.id} value={p.id}>{p.code}{p.fullAddress ? ` — ${p.fullAddress}` : ''}</MenuItem>
+              ))}
+            </TextField>
+          </Grid>
           <Grid size={{ xs: 3 }}>
             <TextField select label="Status" value={form.status} onChange={e => set('status', e.target.value)} fullWidth size="small">
               {['open', 'in_progress', 'completed', 'cancelled'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 3 }}>
+            <TextField select label="Timeframe" value={form.timeframe ?? ''} onChange={e => set('timeframe', e.target.value)} fullWidth size="small">
+              {['', 'Same Day', '24h', '48h', '1 Week', '2 Weeks'].map(t => <MenuItem key={t} value={t}>{t || '—'}</MenuItem>)}
             </TextField>
           </Grid>
         </Grid>
@@ -90,6 +104,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
           <AccordionDetails>
             <Grid container spacing={2}>
               {tf('Approved By', 'approvedBy')}
+              {tf('Payment Approved By', 'paymentApprovedBy')}
               <Grid size={{ xs: 6 }}><TextField label="Approval Date" type="date" value={form.approvalDate ?? ''} onChange={e => set('approvalDate', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
               <Grid size={{ xs: 6 }}><TextField label="Entry Notice Date" type="date" value={form.entryNoticeDate ?? ''} onChange={e => set('entryNoticeDate', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
               {tf('Entry Check-In', 'entryCheckIn')} {tf('Entry Check-Out', 'entryCheckOut')}

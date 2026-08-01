@@ -7,11 +7,56 @@ const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api` : '/api',
 });
 
+/** Wait for Clerk to finish initialising (up to `ms` milliseconds). */
+async function waitForClerk(ms = 5000): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const deadline = Date.now() + ms;
+  while (!(window as any).Clerk?.loaded && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
+
+/** True when a Clerk session exists and can produce a token. Call after Clerk loads. */
+export async function isAuthenticated(): Promise<boolean> {
+  await waitForClerk();
+  const session = (window as any).Clerk?.session;
+  if (!session) return false;
+  try {
+    return !!(await session.getToken());
+  } catch {
+    return false;
+  }
+}
+
 api.interceptors.request.use(async (config) => {
-  const token = await (window as any).Clerk?.session?.getToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  await waitForClerk();
+  const session = (window as any).Clerk?.session;
+  if (!session) {
+    console.debug('[auth] no Clerk session — request will be unauthenticated', config.url);
+    return config;
+  }
+  const token = await session.getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+    console.debug('[auth] token attached', config.url);
+  } else {
+    console.debug('[auth] session exists but getToken() returned null', config.url);
+  }
   return config;
 });
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 && typeof window !== 'undefined') {
+      const current = window.location.pathname;
+      if (!current.startsWith('/sign-in')) {
+        window.location.href = `/sign-in?redirect_url=${encodeURIComponent(current)}`;
+      }
+    }
+    return Promise.reject(err);
+  },
+);
 
 export interface DashboardStats {
   totalProperties: number;
@@ -57,7 +102,13 @@ export interface Property {
   internetPaymentType: string | null;
   internetStatus: string | null;
   internetContractEndDate: string | null;
+  internetOnlineLink: string | null;
+  internetBusinessPhone: string | null;
+  internetNotes: string | null;
+  wastePhone: string | null;
   salesDescription: string | null;
+  crn: string | null;
+  propertyEmail: string | null;
   landlordId: string | null;
 }
 
@@ -106,6 +157,8 @@ export interface MaintenanceTicket {
   clientPhone: string | null;
   approvedBy: string | null;
   approvalDate: string | null;
+  paymentApprovedBy: string | null;
+  timeframe: string | null;
   chargedBy: string | null;
   houseCompany: string | null;
   maintenanceCost: number | null;
@@ -157,6 +210,7 @@ export interface RentPayment {
   rentAmount: number;
   amountPaid: number;
   lateStatus: string;
+  datePaid: string | null;
   notes: string | null;
 }
 
@@ -251,11 +305,23 @@ export interface Booking {
   bed?: { bedNumber: number; bedroomType: string; property?: Property };
 }
 
+export interface Bedroom {
+  id: string;
+  propertyId: string;
+  name: string;
+  active: boolean;
+}
+
 export interface Bed {
   id: string;
   propertyId: string;
   propertyCode?: string;
   bedNumber: number;
+  bedroomId: string | null;
+  bedroomName: string | null;
+  name: string | null;
+  position: number | null;
+  status: 'vacant' | 'allocated';
   bedroomType: string;
   sex: string;
   bedSize: string;
@@ -272,10 +338,10 @@ export const getBeds = (propertyId?: string) =>
 export const getResidents = () => api.get<Resident[]>('/residents').then(r => r.data);
 export const getBookings = (status?: string) =>
   api.get<Booking[]>('/bookings', { params: status ? { status } : {} }).then(r => r.data);
-export const importXlsx = (file: File) => {
+export const importXlsx = (file: File, endpoint = '/import') => {
   const formData = new FormData();
   formData.append('file', file);
-  return api.post('/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+  return api.post(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
 };
 
 // --- Create / Update ---
@@ -286,9 +352,9 @@ export const updateProperty = (id: string, data: Partial<Property>) =>
 export const deleteProperty = (id: string) =>
   api.delete(`/properties/${id}`);
 
-export const createBed = (data: Omit<Bed, 'id' | 'propertyCode' | 'activeBooking'>) =>
+export const createBed = (data: Omit<Bed, 'id' | 'propertyCode' | 'bedroomName' | 'status' | 'activeBooking'>) =>
   api.post<Bed>('/beds', data).then(r => r.data);
-export const updateBed = (id: string, data: Partial<Omit<Bed, 'propertyCode' | 'activeBooking'>>) =>
+export const updateBed = (id: string, data: Partial<Omit<Bed, 'propertyCode' | 'bedroomName' | 'activeBooking'>>) =>
   api.put<Bed>(`/beds/${id}`, data).then(r => r.data);
 export const deleteBed = (id: string) =>
   api.delete(`/beds/${id}`);
@@ -365,6 +431,57 @@ export const getDepositTransactions = (params?: { propertyId?: string; type?: st
 export const createDepositTransaction = (data: Omit<DepositTransaction, 'id'>) => api.post<DepositTransaction>('/deposit-transactions', data).then(r => r.data);
 export const updateDepositTransaction = (id: string, data: Partial<DepositTransaction>) => api.put<DepositTransaction>(`/deposit-transactions/${id}`, data).then(r => r.data);
 export const deleteDepositTransaction = (id: string) => api.delete(`/deposit-transactions/${id}`);
+
+export type SpaceCategory =
+  | 'bedroom' | 'kitchen' | 'bathroom' | 'living_room' | 'dining_room'
+  | 'garden' | 'storage' | 'office' | 'utility' | 'other';
+
+export const SPACE_CATEGORY_LABELS: Record<SpaceCategory, string> = {
+  bedroom: 'Bedroom', kitchen: 'Kitchen', bathroom: 'Bathroom',
+  living_room: 'Living Room', dining_room: 'Dining Room', garden: 'Garden',
+  storage: 'Storage', office: 'Office', utility: 'Utility', other: 'Other',
+};
+
+export interface SpaceItem {
+  id: string;
+  spaceId: string;
+  name: string;
+  quantity: number;
+  condition: string | null;
+  notes: string | null;
+}
+
+export interface PropertySpace {
+  id: string;
+  propertyId: string;
+  category: SpaceCategory;
+  name: string;
+  active: boolean;
+  items?: SpaceItem[];
+}
+
+// Property Spaces
+export const getPropertySpaces = (propertyId?: string) =>
+  api.get<PropertySpace[]>('/property-spaces', { params: propertyId ? { propertyId } : {} }).then(r => r.data);
+export const createPropertySpace = (data: { propertyId: string; category: string; name: string }) =>
+  api.post<PropertySpace>('/property-spaces', data).then(r => r.data);
+export const updatePropertySpace = (id: string, data: Partial<PropertySpace>) =>
+  api.put<PropertySpace>(`/property-spaces/${id}`, data).then(r => r.data);
+export const deletePropertySpace = (id: string) => api.delete(`/property-spaces/${id}`);
+
+export const createSpaceItem = (spaceId: string, data: Omit<SpaceItem, 'id' | 'spaceId'>) =>
+  api.post<SpaceItem>(`/property-spaces/${spaceId}/items`, data).then(r => r.data);
+export const updateSpaceItem = (spaceId: string, itemId: string, data: Partial<SpaceItem>) =>
+  api.put<SpaceItem>(`/property-spaces/${spaceId}/items/${itemId}`, data).then(r => r.data);
+export const deleteSpaceItem = (spaceId: string, itemId: string) =>
+  api.delete(`/property-spaces/${spaceId}/items/${itemId}`);
+
+// Bedrooms
+export const getBedrooms = (propertyId?: string) =>
+  api.get<Bedroom[]>('/bedrooms', { params: propertyId ? { propertyId } : {} }).then(r => r.data);
+export const createBedroom = (data: Omit<Bedroom, 'id' | 'active'>) => api.post<Bedroom>('/bedrooms', data).then(r => r.data);
+export const updateBedroom = (id: string, data: Partial<Bedroom>) => api.put<Bedroom>(`/bedrooms/${id}`, data).then(r => r.data);
+export const deleteBedroom = (id: string) => api.delete(`/bedrooms/${id}`);
 
 // Companies
 export const getCompanies = () => api.get<Company[]>('/companies').then(r => r.data);

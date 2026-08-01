@@ -1,20 +1,23 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Typography, Box, Button, IconButton, TextField, InputAdornment } from '@mui/material';
+import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { getBeds, getProperties, createBed, updateBed, deleteBed, Bed, Property } from '@/services/api';
+import { getBeds, getBedrooms, getProperties, createBed, updateBed, deleteBed, Bed, Bedroom, Property } from '@/services/api';
 import BedDialog from '@/components/crud/BedDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+
+type BedFormState = Omit<Bed, 'id' | 'propertyCode' | 'activeBooking'>;
 
 export default function BedsPage() {
   const { can } = useRole();
   const [beds, setBeds] = useState<Bed[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [bedrooms, setBedrooms] = useState<Bedroom[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bed | null>(null);
@@ -23,8 +26,9 @@ export default function BedsPage() {
   const load = () => getBeds().then(setBeds).catch(() => {});
   useEffect(() => { load(); }, []);
   useEffect(() => { getProperties().then(setProperties).catch(() => {}); }, []);
+  useEffect(() => { getBedrooms().then(setBedrooms).catch(() => {}); }, []);
 
-  const handleSave = async (data: Omit<Bed, 'id' | 'propertyCode' | 'activeBooking'>, id?: string) => {
+  const handleSave = async (data: BedFormState, id?: string) => {
     if (id) await updateBed(id, data);
     else await createBed(data);
     await load();
@@ -46,6 +50,28 @@ export default function BedsPage() {
       renderCell: (params) => (
         <Box sx={{ fontFamily: 'monospace', fontWeight: 600 }}>{params.value}</Box>
       ),
+    },
+    { field: 'bedroomName', headerName: 'Bedroom', width: 130, valueGetter: (_v, row) => (row as Bed).bedroomName ?? '—' },
+    { field: 'name', headerName: 'Location', width: 130, valueGetter: (_v, row) => (row as Bed).name ?? '—' },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 110,
+      renderCell: (params) => {
+        const s = (params.row as Bed).status;
+        return (
+          <Chip
+            label={s === 'allocated' ? 'Allocated' : 'Vacant'}
+            size="small"
+            sx={{
+              bgcolor: s === 'allocated' ? '#DE9151' : '#4caf50',
+              color: 'white',
+              fontWeight: 600,
+              fontSize: 11,
+            }}
+          />
+        );
+      },
     },
     { field: 'bedroomType', headerName: 'Room Type', width: 130 },
     { field: 'sex', headerName: 'Sex', width: 80 },
@@ -76,8 +102,11 @@ export default function BedsPage() {
 
   const q = search.toLowerCase();
   const filtered = beds.filter(b =>
-    [`${b.propertyCode ?? ''}-${b.bedNumber}`, b.bedroomType, b.sex, b.bedSize, b.propertyCode]
-      .some(v => v?.toLowerCase().includes(q))
+    [
+      `${b.propertyCode ?? ''}-${b.bedNumber}`,
+      b.bedroomType, b.sex, b.bedSize, b.propertyCode,
+      b.bedroomName, b.name, b.status,
+    ].some(v => v?.toLowerCase().includes(q))
   );
 
   return (
@@ -92,16 +121,16 @@ export default function BedsPage() {
       </Box>
 
       <TextField
-        placeholder="Search by bed code, room type or sex…"
+        placeholder="Search by bed code, bedroom, room type, status…"
         size="small"
         value={search}
         onChange={e => setSearch(e.target.value)}
-        sx={{ mb: 2, width: 340 }}
+        sx={{ mb: 2, width: 380 }}
         slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
       />
 
       <Box sx={{ width: '100%', overflow: 'auto' }}>
-        <Box sx={{ height: 500, minWidth: 600, bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+        <Box sx={{ height: 500, minWidth: 800, bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
           <DataGrid
             rows={filtered}
             columns={columns}
@@ -121,6 +150,7 @@ export default function BedsPage() {
         open={dialogOpen}
         initial={editing}
         properties={properties}
+        bedrooms={bedrooms}
         onClose={() => setDialogOpen(false)}
         onSave={handleSave}
       />

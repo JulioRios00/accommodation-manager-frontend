@@ -21,7 +21,10 @@ const empty: FormState = {
   internetSupplier: '', internetAccountNumber: '', internetEmail: '',
   internetUsername: '', internetPassword: '', internetPaymentType: '',
   internetStatus: '', internetContractEndDate: '',
+  internetOnlineLink: null, internetBusinessPhone: null, internetNotes: null,
+  wastePhone: null,
   salesDescription: '',
+  crn: null, propertyEmail: null,
   landlordId: null,
 };
 
@@ -83,17 +86,23 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
 
         {/* Basic info — always visible */}
         <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 3 }}>
             <TextField label="Code" value={form.code} onChange={e => set('code', e.target.value)} fullWidth required size="small" />
           </Grid>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 3 }}>
             <TextField label="BU" value={form.bu} onChange={e => set('bu', e.target.value)} fullWidth required size="small" />
           </Grid>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 3 }}>
             <TextField label="Area" value={form.area ?? ''} onChange={e => set('area', e.target.value)} fullWidth size="small" />
           </Grid>
-          <Grid size={{ xs: 12 }}>
+          <Grid size={{ xs: 3 }}>
+            <TextField label="CRN" value={form.crn ?? ''} onChange={e => set('crn', e.target.value)} fullWidth size="small" />
+          </Grid>
+          <Grid size={{ xs: 8 }}>
             <TextField label="Full Address" value={form.fullAddress ?? ''} onChange={e => set('fullAddress', e.target.value)} fullWidth size="small" multiline rows={2} />
+          </Grid>
+          <Grid size={{ xs: 4 }}>
+            <TextField label="Admin Email" value={form.propertyEmail ?? ''} onChange={e => set('propertyEmail', e.target.value)} fullWidth size="small" />
           </Grid>
         </Grid>
 
@@ -163,6 +172,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
               {tf('Supplier', 'wasteSupplier')}
               {tf('Account Number', 'wasteAccountNumber')}
               {tf('Email', 'wasteEmail')}
+              {tf('Mobile', 'wastePhone')}
               {tf('Password', 'wastePassword')}
               {sel('Payment Type', 'wastePaymentType', paymentTypeOptions)}
               <Grid size={{ xs: 3 }}>
@@ -190,6 +200,9 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
               <Grid size={{ xs: 6 }}>
                 <TextField label="Contract End Date" type="date" value={form.internetContractEndDate ?? ''} onChange={e => set('internetContractEndDate', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} />
               </Grid>
+              {tf('Online Account Link', 'internetOnlineLink', { xs: 12 })}
+              {tf('Business Phone', 'internetBusinessPhone')}
+              {tf('Notes', 'internetNotes')}
             </Grid>
           </AccordionDetails>
         </Accordion>
