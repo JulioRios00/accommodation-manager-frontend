@@ -6,6 +6,7 @@ import HandymanIcon from '@mui/icons-material/Handyman';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import HomeWorkIcon from '@mui/icons-material/HomeWork';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import XlsxUploader from '@/components/upload/XlsxUploader';
 
 interface ImportCard {
@@ -58,6 +59,13 @@ const imports: ImportCard[] = [
     endpoint: '/import/resident-payments',
     accepts: '.xlsx,.xlsm',
     icon: <PaymentsIcon sx={{ fontSize: 32, color: '#DE9151' }} />,
+  },
+  {
+    title: 'Provision Residents to Clerk',
+    description: 'Three-column sheet (Full Name, Email, Date of Birth) — creates a Clerk portal account for each resident. Password is set to DDMMYYYY + last name (e.g. 15011990Murphy). Existing accounts are skipped.',
+    endpoint: '/import/residents-clerk',
+    accepts: '.xlsx,.xlsm,.csv',
+    icon: <PersonAddIcon sx={{ fontSize: 32, color: '#DE9151' }} />,
   },
 ];
 

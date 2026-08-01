@@ -107,6 +107,8 @@ export interface Property {
   internetNotes: string | null;
   wastePhone: string | null;
   salesDescription: string | null;
+  eirCode: string | null;
+  propertyType: string | null;
   crn: string | null;
   propertyEmail: string | null;
   landlordId: string | null;
@@ -273,9 +275,11 @@ export interface DelinquencyRow {
 
 export interface Resident {
   id: string;
+  clerkUserId: string | null;
   fullName: string;
   email: string | null;
   telephone: string | null;
+  gender: string | null;
   nationality: string | null;
   personalId: string | null;
   iban: string | null;
@@ -488,6 +492,23 @@ export const getCompanies = () => api.get<Company[]>('/companies').then(r => r.d
 export const createCompany = (data: Omit<Company, 'id' | 'active'>) => api.post<Company>('/companies', data).then(r => r.data);
 export const updateCompany = (id: string, data: Partial<Company>) => api.put<Company>(`/companies/${id}`, data).then(r => r.data);
 export const deleteCompany = (id: string) => api.delete(`/companies/${id}`);
+
+// Resident portal
+export interface PortalProfile {
+  resident: Resident;
+  booking: {
+    id: string;
+    checkInDate: string | null;
+    contractEndDate: string | null;
+    rentAmount: number;
+    depositAmount: number;
+    bed: { id: string; bedNumber: number; bedroomType: string } | null;
+    property: { id: string; code: string; fullAddress: string | null } | null;
+  } | null;
+}
+export const getPortalProfile = () => api.get<PortalProfile>('/portal/me').then(r => r.data);
+export const submitResidentTicket = (data: { category: string; title: string; description?: string | null }) =>
+  api.post<MaintenanceTicket>('/portal/tickets', data).then(r => r.data);
 
 // Reports
 export const getDelinquencyReport = (params?: { propertyId?: string; month?: string }) =>

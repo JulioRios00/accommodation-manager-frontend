@@ -109,10 +109,27 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function PortalShell({ children }: { children: React.ReactNode }) {
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ bgcolor: '#424242', px: 2, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="subtitle1" sx={{ color: 'white', fontWeight: 700 }}>AccomManager</Typography>
+        <UserButton appearance={{ elements: { avatarBox: { width: 30, height: 30 } } }} />
+      </Box>
+      <Box sx={{ flex: 1, p: 2, maxWidth: 600, mx: 'auto', width: '100%' }}>{children}</Box>
+    </Box>
+  );
+}
+
 function Shell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  if (pathname.startsWith('/portal')) {
+    return <PortalShell>{children}</PortalShell>;
+  }
 
   const drawerSx = {
     '& .MuiDrawer-paper': {
