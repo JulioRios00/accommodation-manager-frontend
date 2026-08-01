@@ -6,7 +6,7 @@ import {
   Grid, MenuItem, TextField, Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { Property } from '@/services/api';
+import { Property, Landlord } from '@/services/api';
 
 type FormState = Omit<Property, 'id'>;
 
@@ -24,21 +24,24 @@ const empty: FormState = {
   internetOnlineLink: null, internetBusinessPhone: null, internetNotes: null,
   wastePhone: null,
   salesDescription: '',
+  eirCode: null, propertyType: null,
   crn: null, propertyEmail: null,
   landlordId: null,
 };
 
 const statusOptions = ['', 'Pre', 'Active', 'Inactive'];
 const paymentTypeOptions = ['', 'Direct Debit', 'Standing Order', 'Manual'];
+const PROPERTY_TYPES = ['House', 'Apartment', 'Duplex', 'Studio Block', 'Other'];
 
 interface Props {
   open: boolean;
   initial?: Property | null;
   onClose: () => void;
   onSave: (data: FormState, id?: string) => Promise<void>;
+  landlords?: Landlord[];
 }
 
-export default function PropertyDialog({ open, initial, onClose, onSave }: Props) {
+export default function PropertyDialog({ open, initial, onClose, onSave, landlords = [] }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
 
@@ -98,10 +101,26 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
           <Grid size={{ xs: 3 }}>
             <TextField label="CRN" value={form.crn ?? ''} onChange={e => set('crn', e.target.value)} fullWidth size="small" />
           </Grid>
-          <Grid size={{ xs: 8 }}>
+          <Grid size={{ xs: 6 }}>
             <TextField label="Full Address" value={form.fullAddress ?? ''} onChange={e => set('fullAddress', e.target.value)} fullWidth size="small" multiline rows={2} />
           </Grid>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 3 }}>
+            <TextField
+              label="Eircode"
+              value={form.eirCode ?? ''}
+              onChange={e => set('eirCode', e.target.value)}
+              onBlur={e => set('eirCode', e.target.value.trim().toUpperCase() || null)}
+              fullWidth size="small"
+              slotProps={{ htmlInput: { maxLength: 10 } }}
+            />
+          </Grid>
+          <Grid size={{ xs: 3 }}>
+            <TextField select label="Property Type" value={form.propertyType ?? ''} onChange={e => set('propertyType', e.target.value)} fullWidth size="small">
+              <MenuItem value=""><em>—</em></MenuItem>
+              {PROPERTY_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 6 }}>
             <TextField label="Admin Email" value={form.propertyEmail ?? ''} onChange={e => set('propertyEmail', e.target.value)} fullWidth size="small" />
           </Grid>
         </Grid>
@@ -219,6 +238,48 @@ export default function PropertyDialog({ open, initial, onClose, onSave }: Props
               onChange={e => set('salesDescription', e.target.value)}
               fullWidth size="small" multiline rows={5}
             />
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Landlord & Payments */}
+        <Accordion disableGutters>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Landlord &amp; Payments</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  select label="Landlord"
+                  value={form.landlordId ?? ''}
+                  onChange={e => set('landlordId', e.target.value || null)}
+                  fullWidth size="small"
+                >
+                  <MenuItem value=""><em>None</em></MenuItem>
+                  {landlords.map(l => <MenuItem key={l.id} value={l.id}>{l.name}</MenuItem>)}
+                </TextField>
+              </Grid>
+              {(() => {
+                const selected = landlords.find(l => l.id === form.landlordId);
+                if (!selected) return null;
+                return (
+                  <>
+                    <Grid size={{ xs: 6 }}>
+                      <TextField label="IBAN" value={selected.iban ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
+                    </Grid>
+                    <Grid size={{ xs: 6 }}>
+                      <TextField label="BIC" value={selected.bic ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
+                    </Grid>
+                    <Grid size={{ xs: 6 }}>
+                      <TextField label="Payout Day" value={selected.payoutDay ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
+                    </Grid>
+                    <Grid size={{ xs: 6 }}>
+                      <TextField label="Resident Due Day" value={selected.residentPaymentDueDay ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
+                    </Grid>
+                  </>
+                );
+              })()}
+            </Grid>
           </AccordionDetails>
         </Accordion>
 

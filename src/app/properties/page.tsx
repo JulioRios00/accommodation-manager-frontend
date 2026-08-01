@@ -8,7 +8,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import Link from 'next/link';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { getProperties, getBedrooms, createProperty, updateProperty, deleteProperty, Property, Bedroom } from '@/services/api';
+import { getProperties, getBedrooms, getLandlords, createProperty, updateProperty, deleteProperty, Property, Bedroom, Landlord } from '@/services/api';
 import PropertyDialog from '@/components/crud/PropertyDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -17,6 +17,7 @@ export default function PropertiesPage() {
   const { can } = useRole();
   const [properties, setProperties] = useState<Property[]>([]);
   const [bedrooms, setBedrooms] = useState<Bedroom[]>([]);
+  const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
@@ -25,6 +26,7 @@ export default function PropertiesPage() {
   const load = () => {
     getProperties().then(setProperties).catch(() => {});
     getBedrooms().then(setBedrooms).catch(() => {});
+    getLandlords().then(setLandlords).catch(() => {});
   };
   useEffect(() => { load(); }, []);
 
@@ -46,6 +48,14 @@ export default function PropertiesPage() {
     { field: 'bu', headerName: 'BU', width: 70 },
     { field: 'area', headerName: 'Area', width: 120 },
     { field: 'fullAddress', headerName: 'Address', minWidth: 200, flex: 1 },
+    { field: 'eirCode', headerName: 'Eircode', width: 90 },
+    { field: 'propertyType', headerName: 'Type', width: 110 },
+    {
+      field: 'landlordName',
+      headerName: 'Landlord',
+      width: 130,
+      valueGetter: (_v, row) => landlords.find(l => l.id === (row as Property).landlordId)?.name ?? '',
+    },
     {
       field: 'bedroomCount',
       headerName: 'Bedrooms',
@@ -132,6 +142,7 @@ export default function PropertiesPage() {
         initial={editing}
         onClose={() => setDialogOpen(false)}
         onSave={handleSave}
+        landlords={landlords}
       />
       <ConfirmDialog
         open={!!deleteId}
