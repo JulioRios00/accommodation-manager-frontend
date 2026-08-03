@@ -64,6 +64,9 @@ export interface DashboardStats {
   occupiedBeds: number;
   availableBeds: number;
   onRadarBeds: number;
+  occupancyRate: number;
+  monthlyRevenue: number;
+  projectedRevenue: number;
 }
 
 export interface Property {
