@@ -1,10 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
 import {
-  Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
+  Alert, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
   Divider, FormControlLabel, Grid, MenuItem, TextField, Typography,
 } from '@mui/material';
-import { Resident } from '@/services/api';
+import {
+  Resident, Property, Bed, Booking,
+  getProperties, getBeds, getBookings, createBooking, updateBooking,
+} from '@/services/api';
 
 type FormState = Omit<Resident, 'id'>;
 
@@ -17,39 +20,118 @@ const empty: FormState = {
   hasObservation: false, observation: '',
 };
 
+const emptyBooking = { propertyId: '', bedId: '', checkIn: '', contractEnd: '', rent: '', deposit: '' };
+
 interface Props {
   open: boolean;
   initial?: Resident | null;
   onClose: () => void;
-  onSave: (data: FormState, id?: string) => Promise<void>;
+  onSave: (data: FormState, id?: string) => Promise<string>;
 }
 
 export default function ResidentDialog({ open, initial, onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
 
+  // Accommodation
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [allBeds, setAllBeds] = useState<Bed[]>([]);
+  const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
+  const [bk, setBk] = useState(emptyBooking);
+
   useEffect(() => {
     setForm(initial ? { ...initial } : { ...empty });
+    setBk(emptyBooking);
+    setActiveBooking(null);
+
+    if (!open) return;
+
+    const loaders: Promise<any>[] = [getProperties(), getBeds()];
+    if (initial?.id) loaders.push(getBookings('active'));
+
+    Promise.all(loaders).then(([props, bds, bookings]) => {
+      setProperties(props);
+      setAllBeds(bds);
+
+      if (bookings && initial?.id) {
+        const booking: Booking | undefined = bookings.find((b: Booking) => b.residentId === initial.id);
+        if (booking) {
+          setActiveBooking(booking);
+          const bed = bds.find((b: Bed) => b.id === booking.bedId);
+          setBk({
+            propertyId: bed?.propertyId ?? '',
+            bedId: booking.bedId,
+            checkIn: booking.checkInDate ? String(booking.checkInDate).split('T')[0] : '',
+            contractEnd: booking.contractEndDate ? String(booking.contractEndDate).split('T')[0] : '',
+            rent: String(booking.rentAmount ?? ''),
+            deposit: String(booking.depositAmount ?? ''),
+          });
+        }
+      }
+    }).catch(() => {});
   }, [initial, open]);
 
   const set = (field: keyof FormState, value: string) =>
     setForm(f => ({ ...f, [field]: value || null }));
-
   const setNum = (field: keyof FormState, value: string) =>
     setForm(f => ({ ...f, [field]: value ? Number(value) : null }));
-
   const setBool = (field: keyof FormState, value: boolean) =>
     setForm(f => ({ ...f, [field]: value }));
+
+  const bedsForProperty = allBeds.filter(
+    b => b.propertyId === bk.propertyId && (b.status === 'vacant' || b.id === bk.bedId),
+  );
+
+  const handleBedChange = (bedId: string) => {
+    const bed = allBeds.find(b => b.id === bedId);
+    setBk(b => ({
+      ...b,
+      bedId,
+      rent: b.rent || String(bed?.rentAmount ?? ''),
+      deposit: b.deposit || String(bed?.depositAmount ?? ''),
+    }));
+  };
+
+  const handlePropertyChange = (propertyId: string) => {
+    setBk(b => ({ ...b, propertyId, bedId: '' }));
+  };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave(form, initial?.id);
+      const residentId = await onSave(form, initial?.id);
+
+      if (bk.bedId && residentId) {
+        const bookingData = {
+          bedId: bk.bedId,
+          residentId,
+          checkInDate: bk.checkIn || null,
+          contractEndDate: bk.contractEnd || null,
+          checkOutDate: null as string | null,
+          depositAmount: Number(bk.deposit) || 0,
+          rentAmount: Number(bk.rent) || 0,
+          isHeadResident: false,
+          isTemporary: false,
+          status: 'active' as const,
+          comments: null as string | null,
+        };
+        if (activeBooking) await updateBooking(activeBooking.id, bookingData);
+        else await createBooking(bookingData);
+      }
+
       onClose();
     } finally {
       setSaving(false);
     }
   };
+
+  const currentBedLabel = (() => {
+    if (!activeBooking) return null;
+    const bed = allBeds.find(b => b.id === activeBooking.bedId);
+    if (!bed) return null;
+    const prop = properties.find(p => p.id === bed.propertyId);
+    return `${prop?.code ?? '?'}-${bed.bedNumber}`;
+  })();
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -106,6 +188,88 @@ export default function ResidentDialog({ open, initial, onClose, onSave }: Props
             />
           </Grid>
 
+          {/* ── Accommodation ── */}
+          <Grid size={{ xs: 12 }}>
+            <Divider sx={{ my: 0.5 }} />
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Accommodation
+            </Typography>
+          </Grid>
+
+          {currentBedLabel && (
+            <Grid size={{ xs: 12 }}>
+              <Alert severity="info" sx={{ py: 0.5 }}>
+                Currently in <strong>{currentBedLabel}</strong>
+                {activeBooking?.contractEndDate && ` · contract ends ${new Date(activeBooking.contractEndDate).toLocaleDateString('en-GB')}`}
+              </Alert>
+            </Grid>
+          )}
+
+          <Grid size={{ xs: 6 }}>
+            <TextField
+              select label="Property" value={bk.propertyId}
+              onChange={e => handlePropertyChange(e.target.value)}
+              fullWidth size="small"
+            >
+              <MenuItem value=""><em>— none —</em></MenuItem>
+              {properties.map(p => (
+                <MenuItem key={p.id} value={p.id}>{p.code} {p.fullAddress ? `· ${p.fullAddress}` : ''}</MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField
+              select label="Bed / Unit" value={bk.bedId}
+              onChange={e => handleBedChange(e.target.value)}
+              fullWidth size="small"
+              disabled={!bk.propertyId}
+            >
+              <MenuItem value=""><em>— none —</em></MenuItem>
+              {bedsForProperty.map(b => (
+                <MenuItem key={b.id} value={b.id}>
+                  {b.propertyCode ?? ''}-{b.bedNumber}
+                  {b.bedroomName ? ` · ${b.bedroomName}` : ''}
+                  {b.bedroomType ? ` (${b.bedroomType})` : ''}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField
+              label="Check-in Date" type="date" value={bk.checkIn}
+              onChange={e => setBk(b => ({ ...b, checkIn: e.target.value }))}
+              fullWidth size="small"
+              slotProps={{ inputLabel: { shrink: true } }}
+              disabled={!bk.bedId}
+            />
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField
+              label="Contract End Date" type="date" value={bk.contractEnd}
+              onChange={e => setBk(b => ({ ...b, contractEnd: e.target.value }))}
+              fullWidth size="small"
+              slotProps={{ inputLabel: { shrink: true } }}
+              disabled={!bk.bedId}
+            />
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField
+              label="Rent (€)" type="number" value={bk.rent}
+              onChange={e => setBk(b => ({ ...b, rent: e.target.value }))}
+              fullWidth size="small"
+              disabled={!bk.bedId}
+            />
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField
+              label="Deposit (€)" type="number" value={bk.deposit}
+              onChange={e => setBk(b => ({ ...b, deposit: e.target.value }))}
+              fullWidth size="small"
+              disabled={!bk.bedId}
+            />
+          </Grid>
+
+          {/* Notes & Flags */}
           <Grid size={{ xs: 12 }}>
             <Divider sx={{ my: 0.5 }} />
             <Typography variant="caption" color="text.secondary">Notes & Flags</Typography>

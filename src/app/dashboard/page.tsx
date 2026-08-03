@@ -220,7 +220,7 @@ export default function DashboardPage() {
       </Box>
 
       {/* ── Global KPI cards (step 3: occupancy; step 4: revenue) ─────────── */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)', md: 'repeat(8, 1fr)' }, gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)', md: 'repeat(8, 1fr)' }, gap: 1.5, mb: 3 }}>
         <StatsCard title="Properties"    value={stats?.totalProperties ?? 0}  icon={<ApartmentIcon />}   color="#114C5A" />
         <StatsCard title="Total Beds"    value={stats?.totalBeds ?? 0}         icon={<BedIcon />}         color="#114C5A" />
         <StatsCard title="Occupied"      value={stats?.occupiedBeds ?? 0}      icon={<CheckCircleIcon />} color="#2e7d32" />

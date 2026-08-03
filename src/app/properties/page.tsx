@@ -8,7 +8,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import Link from 'next/link';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { getProperties, getBedrooms, getLandlords, createProperty, updateProperty, deleteProperty, Property, Bedroom, Landlord } from '@/services/api';
+import { getProperties, getBeds, getBedrooms, getLandlords, createProperty, updateProperty, deleteProperty, Property, Bed, Bedroom, Landlord } from '@/services/api';
 import PropertyDialog from '@/components/crud/PropertyDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -16,6 +16,7 @@ import { useRole } from '@/hooks/useRole';
 export default function PropertiesPage() {
   const { can } = useRole();
   const [properties, setProperties] = useState<Property[]>([]);
+  const [beds, setBeds] = useState<Bed[]>([]);
   const [bedrooms, setBedrooms] = useState<Bedroom[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [search, setSearch] = useState('');
@@ -25,6 +26,7 @@ export default function PropertiesPage() {
 
   const load = () => {
     getProperties().then(setProperties).catch(() => {});
+    getBeds().then(setBeds).catch(() => {});
     getBedrooms().then(setBedrooms).catch(() => {});
     getLandlords().then(setLandlords).catch(() => {});
   };
@@ -62,6 +64,21 @@ export default function PropertiesPage() {
       width: 95,
       type: 'number',
       valueGetter: (_v, row) => bedrooms.filter(b => b.propertyId === (row as Property).id).length,
+    },
+    {
+      field: 'bedCount',
+      headerName: 'Beds',
+      width: 70,
+      type: 'number',
+      valueGetter: (_v, row) => beds.filter(b => b.propertyId === (row as Property).id).length,
+    },
+    {
+      field: 'residentCount',
+      headerName: 'Residents',
+      width: 90,
+      type: 'number',
+      valueGetter: (_v, row) =>
+        beds.filter(b => b.propertyId === (row as Property).id && b.activeBooking?.residentId).length,
     },
     { field: 'electricityStatus', headerName: 'Electricity', width: 110 },
     { field: 'gasStatus', headerName: 'Gas', width: 90 },

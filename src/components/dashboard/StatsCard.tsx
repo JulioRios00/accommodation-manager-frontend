@@ -11,26 +11,28 @@ interface StatsCardProps {
 
 export default function StatsCard({ title, value, icon, color }: StatsCardProps) {
   return (
-    <Card sx={{ flex: 1, minWidth: 160 }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Card sx={{ flex: 1 }}>
+      <CardContent sx={{ p: '10px !important' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box
             sx={{
               bgcolor: color,
-              borderRadius: 2,
-              p: 1,
+              borderRadius: 1.5,
+              p: 0.75,
               display: 'flex',
               alignItems: 'center',
               color: 'white',
+              flexShrink: 0,
+              '& svg': { fontSize: 20 },
             }}
           >
             {icon}
           </Box>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, fontSize: '1rem' }}>
               {value}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {title}
             </Typography>
           </Box>

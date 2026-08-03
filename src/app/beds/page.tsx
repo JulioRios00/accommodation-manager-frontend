@@ -6,7 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { getBeds, getBedrooms, getProperties, createBed, updateBed, deleteBed, Bed, Bedroom, Property } from '@/services/api';
+import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, Bed, Bedroom, Property, Resident } from '@/services/api';
 import BedDialog from '@/components/crud/BedDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -18,6 +18,7 @@ export default function BedsPage() {
   const [beds, setBeds] = useState<Bed[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [bedrooms, setBedrooms] = useState<Bedroom[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bed | null>(null);
@@ -27,6 +28,9 @@ export default function BedsPage() {
   useEffect(() => { load(); }, []);
   useEffect(() => { getProperties().then(setProperties).catch(() => {}); }, []);
   useEffect(() => { getBedrooms().then(setBedrooms).catch(() => {}); }, []);
+  useEffect(() => { getResidents().then(setResidents).catch(() => {}); }, []);
+
+  const residentMap = new Map(residents.map(r => [r.id, r]));
 
   const handleSave = async (data: BedFormState, id?: string) => {
     if (id) await updateBed(id, data);
@@ -50,6 +54,16 @@ export default function BedsPage() {
       renderCell: (params) => (
         <Box sx={{ fontFamily: 'monospace', fontWeight: 600 }}>{params.value}</Box>
       ),
+    },
+    {
+      field: 'residentName',
+      headerName: 'Resident',
+      minWidth: 160,
+      flex: 1,
+      valueGetter: (_v, row) => {
+        const residentId = (row as Bed).activeBooking?.residentId;
+        return residentId ? (residentMap.get(residentId)?.fullName ?? residentId) : '—';
+      },
     },
     { field: 'bedroomName', headerName: 'Bedroom', width: 130, valueGetter: (_v, row) => (row as Bed).bedroomName ?? '—' },
     { field: 'name', headerName: 'Location', width: 130, valueGetter: (_v, row) => (row as Bed).name ?? '—' },
@@ -101,13 +115,14 @@ export default function BedsPage() {
   ];
 
   const q = search.toLowerCase();
-  const filtered = beds.filter(b =>
-    [
+  const filtered = beds.filter(b => {
+    const residentName = b.activeBooking?.residentId ? residentMap.get(b.activeBooking.residentId)?.fullName : undefined;
+    return [
       `${b.propertyCode ?? ''}-${b.bedNumber}`,
       b.bedroomType, b.sex, b.bedSize, b.propertyCode,
-      b.bedroomName, b.name, b.status,
-    ].some(v => v?.toLowerCase().includes(q))
-  );
+      b.bedroomName, b.name, b.status, residentName,
+    ].some(v => v?.toLowerCase().includes(q));
+  });
 
   return (
     <Box>

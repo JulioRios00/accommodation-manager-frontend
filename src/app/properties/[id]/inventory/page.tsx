@@ -13,12 +13,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import KitchenIcon from '@mui/icons-material/Kitchen';
 import {
-  getProperties, getBeds, getBedrooms,
+  getProperties, getBeds, getBedrooms, getResidents,
   createBedroom, updateBedroom, deleteBedroom,
   createBed, updateBed, deleteBed,
   getPropertySpaces, createPropertySpace, updatePropertySpace, deletePropertySpace,
   createSpaceItem, updateSpaceItem, deleteSpaceItem,
-  Bed, Bedroom, Property, PropertySpace, SpaceItem, SPACE_CATEGORY_LABELS,
+  Bed, Bedroom, Property, PropertySpace, SpaceItem, Resident, SPACE_CATEGORY_LABELS,
 } from '@/services/api';
 import BedroomDialog from '@/components/crud/BedroomDialog';
 import BedDialog from '@/components/crud/BedDialog';
@@ -65,6 +65,7 @@ export default function InventoryPage() {
   const [beds, setBeds] = useState<Bed[]>([]);
   const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [spaces, setSpaces] = useState<PropertySpace[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
 
   // Bedroom dialog state
   const [bedroomDialogOpen, setBedroomDialogOpen] = useState(false);
@@ -89,17 +90,19 @@ export default function InventoryPage() {
   const [deleteItemInfo, setDeleteItemInfo] = useState<{ spaceId: string; itemId: string } | null>(null);
 
   const load = async () => {
-    const [props, brs, bds, sps] = await Promise.all([
+    const [props, brs, bds, sps, rs] = await Promise.all([
       getProperties(),
       getBedrooms(propertyId),
       getBeds(propertyId),
       getPropertySpaces(propertyId),
+      getResidents(),
     ]);
     setAllProperties(props);
     setProperty(props.find(p => p.id === propertyId) ?? null);
     setBedrooms(brs);
     setBeds(bds);
     setSpaces(sps);
+    setResidents(rs);
   };
 
   useEffect(() => {
@@ -170,6 +173,7 @@ export default function InventoryPage() {
     setBedDialogOpen(true);
   };
 
+  const residentMap = new Map(residents.map(r => [r.id, r]));
   const bedsForBedroom = (bedroomId: string) => beds.filter(b => b.bedroomId === bedroomId);
   const unassignedBeds = beds.filter(b => !b.bedroomId);
 
@@ -178,6 +182,7 @@ export default function InventoryPage() {
       <TableHead>
         <TableRow sx={{ '& th': { fontWeight: 600, bgcolor: '#FFF0E6', py: 0.75 } }}>
           <TableCell>Bed #</TableCell>
+          <TableCell>Resident</TableCell>
           <TableCell>Location</TableCell>
           <TableCell>Pos.</TableCell>
           <TableCell>Type</TableCell>
@@ -192,35 +197,43 @@ export default function InventoryPage() {
       <TableBody>
         {rows.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={10} align="center" sx={{ py: 2, color: 'text.secondary' }}>
+            <TableCell colSpan={11} align="center" sx={{ py: 2, color: 'text.secondary' }}>
               No beds yet
             </TableCell>
           </TableRow>
-        ) : rows.map(bed => (
-          <TableRow key={bed.id} hover>
-            <TableCell sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-              {bed.propertyCode ?? ''}-{bed.bedNumber}
-            </TableCell>
-            <TableCell>{bed.name ?? '—'}</TableCell>
-            <TableCell>{bed.position ?? '—'}</TableCell>
-            <TableCell>{bed.bedroomType}</TableCell>
-            <TableCell>{bed.sex}</TableCell>
-            <TableCell>{bed.bedSize}</TableCell>
-            <TableCell align="right">{bed.rentAmount}</TableCell>
-            <TableCell align="right">{bed.depositAmount}</TableCell>
-            <TableCell><StatusChip status={bed.status} /></TableCell>
-            {can('bed:write') && (
-              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                <IconButton size="small" onClick={() => openEditBed(bed)}>
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" color="error" onClick={() => setDeleteBedId(bed.id)}>
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
+        ) : rows.map(bed => {
+          const residentName = bed.activeBooking?.residentId
+            ? (residentMap.get(bed.activeBooking.residentId)?.fullName ?? '—')
+            : '—';
+          return (
+            <TableRow key={bed.id} hover>
+              <TableCell sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                {bed.propertyCode ?? ''}-{bed.bedNumber}
               </TableCell>
-            )}
-          </TableRow>
-        ))}
+              <TableCell sx={{ fontWeight: residentName !== '—' ? 500 : 400, color: residentName === '—' ? 'text.secondary' : 'inherit' }}>
+                {residentName}
+              </TableCell>
+              <TableCell>{bed.name ?? '—'}</TableCell>
+              <TableCell>{bed.position ?? '—'}</TableCell>
+              <TableCell>{bed.bedroomType}</TableCell>
+              <TableCell>{bed.sex}</TableCell>
+              <TableCell>{bed.bedSize}</TableCell>
+              <TableCell align="right">{bed.rentAmount}</TableCell>
+              <TableCell align="right">{bed.depositAmount}</TableCell>
+              <TableCell><StatusChip status={bed.status} /></TableCell>
+              {can('bed:write') && (
+                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                  <IconButton size="small" onClick={() => openEditBed(bed)}>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" color="error" onClick={() => setDeleteBedId(bed.id)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </TableCell>
+              )}
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );

@@ -22,10 +22,10 @@ export default function ResidentsPage() {
   const load = () => getResidents().then(setResidents).catch(() => {});
   useEffect(() => { load(); }, []);
 
-  const handleSave = async (data: Omit<Resident, 'id'>, id?: string) => {
-    if (id) await updateResident(id, data);
-    else await createResident(data);
+  const handleSave = async (data: Omit<Resident, 'id'>, id?: string): Promise<string> => {
+    const saved = id ? await updateResident(id, data) : await createResident(data);
     await load();
+    return saved.id;
   };
 
   const handleDelete = async () => {
