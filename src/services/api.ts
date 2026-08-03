@@ -146,6 +146,9 @@ export interface MaintenanceTicket {
   id: string;
   orderNumber: string;
   propertyId: string;
+  category: string | null;
+  bedId: string | null;
+  residentId: string | null;
   serviceProviderId: string | null;
   title: string;
   descriptionRequested: string | null;
@@ -173,6 +176,7 @@ export interface MaintenanceTicket {
   tags: string[];
   clerkUserId: string | null;
   clerkUserName: string | null;
+  createdAt: string;
 }
 
 export interface TicketActivityLog {
@@ -392,11 +396,17 @@ export const deleteServiceProvider = (id: string) => api.delete(`/service-provid
 // Maintenance Tickets
 export const getMaintenanceTickets = (params?: { propertyId?: string; status?: string; urgency?: string }) =>
   api.get<MaintenanceTicket[]>('/maintenance-tickets', { params }).then(r => r.data);
-export const createMaintenanceTicket = (data: Omit<MaintenanceTicket, 'id' | 'orderNumber'>) =>
+export const createMaintenanceTicket = (data: Omit<MaintenanceTicket, 'id' | 'orderNumber' | 'createdAt'>) =>
   api.post<MaintenanceTicket>('/maintenance-tickets', data).then(r => r.data);
-export const updateMaintenanceTicket = (id: string, data: Partial<MaintenanceTicket>) =>
+export const updateMaintenanceTicket = (id: string, data: Partial<Omit<MaintenanceTicket, 'createdAt'>>) =>
   api.put<MaintenanceTicket>(`/maintenance-tickets/${id}`, data).then(r => r.data);
 export const deleteMaintenanceTicket = (id: string) => api.delete(`/maintenance-tickets/${id}`);
+export const getMaintenanceQueue = () =>
+  api.get<MaintenanceTicket[]>('/maintenance-tickets/queue').then(r => r.data);
+export const claimMaintenanceTicket = (id: string) =>
+  api.post<MaintenanceTicket>(`/maintenance-tickets/${id}/claim`).then(r => r.data);
+export const closeMaintenanceTicket = (id: string, data: { resolutionNotes?: string }) =>
+  api.post<MaintenanceTicket>(`/maintenance-tickets/${id}/close`, data).then(r => r.data);
 export const getTicketActivity = (ticketId: string) =>
   api.get<TicketActivityLog[]>(`/maintenance-tickets/${ticketId}/activity`).then(r => r.data);
 export const addTicketActivity = (ticketId: string, data: Partial<TicketActivityLog>) =>
