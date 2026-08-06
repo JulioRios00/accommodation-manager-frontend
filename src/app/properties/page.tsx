@@ -10,6 +10,7 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DataGrid, GridColDef, GridColumnVisibilityModel } from '@mui/x-data-grid';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import { getProperties, getBeds, getBedrooms, getLandlords, createProperty, updateProperty, deleteProperty, Property, Bed, Bedroom, Landlord } from '@/services/api';
 import PropertyDialog from '@/components/crud/PropertyDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
@@ -189,6 +190,8 @@ export default function PropertiesPage() {
             columnVisibilityModel={columnVisibility}
             onColumnVisibilityModelChange={handleColumnVisibilityChange}
             onRowDoubleClick={params => router.push(`/properties/${params.row.id}/inventory`)}
+            slots={{ footer: CustomGridFooter }}
+            slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
             sx={{
               border: 'none',
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },

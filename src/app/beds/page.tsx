@@ -7,6 +7,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, Bed, Bedroom, Property, Resident } from '@/services/api';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import BedDialog from '@/components/crud/BedDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -153,6 +154,8 @@ export default function BedsPage() {
             pageSizeOptions={[10, 25]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             disableRowSelectionOnClick
+            slots={{ footer: CustomGridFooter }}
+            slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
             sx={{
               border: 'none',
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },

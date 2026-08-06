@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
   getRentPayments, createRentPayment, updateRentPayment, deleteRentPayment, RentPayment,
   getLandlordPayments, createLandlordPayment, updateLandlordPayment, deleteLandlordPayment, LandlordPayment,
@@ -110,9 +111,9 @@ export default function PaymentsPage() {
         <Tab label="Landlord Payments" />
         <Tab label="Deposits" />
       </Tabs>
-      {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} />}
-      {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} />}
-      {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} />}
+      {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 0 && <RentPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateRentPayment(id, data); else await createRentPayment(data); await load(); }} />}
       {tab === 1 && <LandlordPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateLandlordPayment(id, data); else await createLandlordPayment(data); await load(); }} />}
       {tab === 2 && <DepositTransactionDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateDepositTransaction(id, data); else await createDepositTransaction(data); await load(); }} />}

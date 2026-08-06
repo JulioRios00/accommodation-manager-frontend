@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import { getResidents, createResident, updateResident, deleteResident, Resident } from '@/services/api';
 import ResidentDialog from '@/components/crud/ResidentDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
@@ -98,8 +99,9 @@ export default function ResidentsPage() {
             pageSizeOptions={[10, 25]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             disableRowSelectionOnClick
-
             onRowDoubleClick={params => { setEditing(params.row as Resident); setDialogOpen(true); }}
+            slots={{ footer: CustomGridFooter }}
+            slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
             sx={{
               border: 'none',
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },

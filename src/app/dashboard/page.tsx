@@ -4,7 +4,7 @@ import {
   Box, Button, Chip, IconButton, MenuItem, Paper, TextField,
   Tooltip, Typography,
 } from '@mui/material';
-import { DataGrid, GridColDef, GridColumnVisibilityModel } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridColumnVisibilityModel, GridColumnResizeParams } from '@mui/x-data-grid';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import BedIcon from '@mui/icons-material/Bed';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -18,7 +18,8 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import ClearIcon from '@mui/icons-material/Clear';
 import StatsCard from '@/components/dashboard/StatsCard';
 import XlsxUploader from '@/components/upload/XlsxUploader';
-import { getDashboardStats, getProperties, getBeds, getResidents, DashboardStats, Bed, Property, Resident } from '@/services/api';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
+import { getDashboardStats, getProperties, getBeds, getResidents, getCompanies, DashboardStats, Bed, Property, Resident } from '@/services/api';
 import { useRole } from '@/hooks/useRole';
 
 const PROPERTY_TYPES = ['House', 'Apartment', 'Duplex', 'Studio Block', 'Other'];
@@ -30,6 +31,7 @@ const AVAILABILITY_WINDOWS = [
 ];
 
 const PROP_COL_VIS_KEY = 'dashboard_property_col_visibility';
+const PROP_COL_DIM_KEY = 'dashboard_property_col_dimensions';
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
@@ -45,9 +47,12 @@ function daysUntil(iso: string | null | undefined): number | null {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
 }
 
-// Vertically-centred cell wrapper
 function Cell({ children }: { children: React.ReactNode }) {
   return <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>{children}</Box>;
+}
+
+function CellCenter({ children }: { children: React.ReactNode }) {
+  return <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>{children}</Box>;
 }
 
 export default function DashboardPage() {
@@ -56,6 +61,7 @@ export default function DashboardPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [buOptions, setBuOptions] = useState<string[]>([]);
   const [importOpen, setImportOpen] = useState(false);
 
   // Filter state
@@ -69,38 +75,65 @@ export default function DashboardPage() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
 
   // Column visibility persistence
-  const [propColVis, setPropColVis] = useState<GridColumnVisibilityModel>({});
-  useEffect(() => {
+  const [propColVis, setPropColVis] = useState<GridColumnVisibilityModel>(() => {
+    if (typeof window === 'undefined') return {};
     try {
-      const stored = localStorage.getItem(PROP_COL_VIS_KEY);
-      if (stored) setPropColVis(JSON.parse(stored));
-    } catch { }
-  }, []);
+      const s = localStorage.getItem(PROP_COL_VIS_KEY);
+      return s ? JSON.parse(s) : {};
+    } catch { return {}; }
+  });
+
+  // Column width persistence — read once on mount via lazy initializer
+  const [initialColDimensions] = useState<Record<string, { width: number }>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const s = localStorage.getItem(PROP_COL_DIM_KEY);
+      return s ? JSON.parse(s) : {};
+    } catch { return {}; }
+  });
+
+  // Key to force-remount property grid (used by reset)
+  const [propGridKey, setPropGridKey] = useState(0);
+
   const handlePropColVisChange = useCallback((model: GridColumnVisibilityModel) => {
     setPropColVis(model);
     try { localStorage.setItem(PROP_COL_VIS_KEY, JSON.stringify(model)); } catch { }
   }, []);
+
+  const handleColumnWidthChange = useCallback((params: GridColumnResizeParams) => {
+    try {
+      const stored = localStorage.getItem(PROP_COL_DIM_KEY);
+      const dims: Record<string, { width: number }> = stored ? JSON.parse(stored) : {};
+      dims[params.colDef.field] = { width: params.width };
+      localStorage.setItem(PROP_COL_DIM_KEY, JSON.stringify(dims));
+    } catch { }
+  }, []);
+
   const resetPropView = () => {
     setPropColVis({});
-    try { localStorage.removeItem(PROP_COL_VIS_KEY); } catch { }
+    setPropGridKey(k => k + 1);
+    try {
+      localStorage.removeItem(PROP_COL_VIS_KEY);
+      localStorage.removeItem(PROP_COL_DIM_KEY);
+    } catch { }
   };
 
   const residentMap = useMemo(() => new Map(residents.map(r => [r.id, r.fullName])), [residents]);
 
   const loadData = useCallback(async () => {
     try {
-      const [s, props, bds, res] = await Promise.all([getDashboardStats(), getProperties(), getBeds(), getResidents()]);
+      const [s, props, bds, res, comps] = await Promise.all([
+        getDashboardStats(), getProperties(), getBeds(), getResidents(), getCompanies(),
+      ]);
       setStats(s);
       setProperties(props);
       setBeds(bds);
       setResidents(res);
+      setBuOptions((comps.map(c => c.bu).filter(Boolean) as string[]).sort());
     } catch { }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
-
-  // Unique BUs from loaded properties
-  const uniqueBUs = useMemo(() => [...new Set(properties.map(p => p.bu).filter(Boolean))].sort(), [properties]);
 
   // ── Per-property occupancy + revenue breakdown ───────────────────────────
   const propertyRows = useMemo(() => {
@@ -148,7 +181,7 @@ export default function DashboardPage() {
           area: p.area ?? '—',
           total,
           occupied,
-          available: total - occupied,
+          empty: total - occupied,
           occupancyRate,
           monthly,
           onRadar,
@@ -161,7 +194,7 @@ export default function DashboardPage() {
     if (!statusFilter) return propertyRows;
     return propertyRows.filter(row => {
       if (statusFilter === 'occupied') return row.occupied > 0;
-      if (statusFilter === 'available') return row.available > 0;
+      if (statusFilter === 'available') return row.empty > 0;
       if (statusFilter === 'onradar') return row.onRadar > 0;
       return true;
     });
@@ -199,7 +232,7 @@ export default function DashboardPage() {
         bedSize: bed.bedSize,
         rentAmount: bed.rentAmount,
         depositAmount: bed.depositAmount,
-        status: bed.status === 'allocated' ? 'Occupied' : 'Available',
+        status: bed.status === 'allocated' ? 'Occupied' : 'Empty',
         residentName: bed.activeBooking?.residentId ? (residentMap.get(bed.activeBooking.residentId) ?? '—') : '—',
         checkIn: formatDate(bed.activeBooking?.checkInDate),
         contractEnd: formatDate(bed.activeBooking?.contractEndDate),
@@ -222,21 +255,21 @@ export default function DashboardPage() {
     { field: 'address', headerName: 'Address', minWidth: 200, flex: 1 },
     { field: 'type', headerName: 'Type', width: 120 },
     { field: 'area', headerName: 'Area', width: 120 },
-    { field: 'total', headerName: 'Beds', width: 70, type: 'number' },
-    { field: 'occupied', headerName: 'Occupied', width: 90, type: 'number' },
-    { field: 'available', headerName: 'Available', width: 90, type: 'number' },
+    { field: 'total', headerName: 'Beds', width: 70, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as number}</CellCenter> },
+    { field: 'occupied', headerName: 'Occupied', width: 90, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as number}</CellCenter> },
+    { field: 'empty', headerName: 'Empty', width: 80, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as number}</CellCenter> },
     {
-      field: 'occupancyRate', headerName: 'Occupancy %', width: 120, type: 'number',
+      field: 'occupancyRate', headerName: 'Occupancy', width: 110, align: 'center', headerAlign: 'center',
       renderCell: p => {
         const v = p.value as number;
         const color = v >= 90 ? '#2e7d32' : v >= 60 ? '#ef6c00' : '#c62828';
-        return <Cell><Chip label={`${v}%`} size="small" sx={{ bgcolor: color, color: 'white', fontWeight: 700, fontSize: 12 }} /></Cell>;
+        return <CellCenter><Chip label={`${v}%`} size="small" sx={{ bgcolor: color, color: 'white', fontWeight: 700, fontSize: 12 }} /></CellCenter>;
       },
     },
-    { field: 'onRadar', headerName: 'On Radar', width: 90, type: 'number' },
+    { field: 'onRadar', headerName: 'On Radar', width: 90, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as number}</CellCenter> },
     {
-      field: 'monthly', headerName: 'Monthly Rev.', width: 130, type: 'number',
-      renderCell: p => <Cell><Typography variant="body2" sx={{ fontWeight: 600 }}>{fmt(p.value as number)}</Typography></Cell>,
+      field: 'monthly', headerName: 'Monthly Rev.', width: 130, align: 'center', headerAlign: 'center',
+      renderCell: p => <CellCenter><Typography variant="body2" sx={{ fontWeight: 600 }}>{fmt(p.value as number)}</Typography></CellCenter>,
     },
   ];
 
@@ -261,21 +294,21 @@ export default function DashboardPage() {
       ),
     },
     { field: 'residentName', headerName: 'Resident', minWidth: 160, flex: 1 },
-    { field: 'bedroomType', headerName: 'Room Type', width: 130 },
-    { field: 'sex', headerName: 'Sex', width: 70 },
-    { field: 'bedSize', headerName: 'Bed Size', width: 90 },
-    { field: 'rentAmount', headerName: 'Rent (€)', width: 95, type: 'number' },
-    { field: 'depositAmount', headerName: 'Deposit (€)', width: 105, type: 'number' },
+    { field: 'bedroomType', headerName: 'Room Type', width: 130, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as string}</CellCenter> },
+    { field: 'sex', headerName: 'Gender', width: 80, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as string}</CellCenter> },
+    { field: 'bedSize', headerName: 'Bed Size', width: 90, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as string}</CellCenter> },
+    { field: 'rentAmount', headerName: 'Rent (€)', width: 95, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as number}</CellCenter> },
+    { field: 'depositAmount', headerName: 'Deposit (€)', width: 105, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as number}</CellCenter> },
     { field: 'checkIn', headerName: 'Check-in', width: 105 },
     { field: 'contractEnd', headerName: 'Contract End', width: 120 },
     {
-      field: 'daysLeft', headerName: 'Days Left', width: 95, type: 'number',
+      field: 'daysLeft', headerName: 'Days Left', width: 95, align: 'center', headerAlign: 'center',
       renderCell: p => {
         const v = p.value as number | null;
-        if (v === null) return <Cell>—</Cell>;
-        if (v < 0) return <Cell><Chip label="Ended" size="small" color="error" /></Cell>;
-        if (v <= 38) return <Cell><Chip label={`${v}d`} size="small" color="warning" /></Cell>;
-        return <Cell><Typography variant="body2">{v}d</Typography></Cell>;
+        if (v === null) return <CellCenter>—</CellCenter>;
+        if (v < 0) return <CellCenter><Chip label="Ended" size="small" color="error" /></CellCenter>;
+        if (v <= 38) return <CellCenter><Chip label={`${v}d`} size="small" color="warning" /></CellCenter>;
+        return <CellCenter><Typography variant="body2">{v}d</Typography></CellCenter>;
       },
     },
   ];
@@ -306,7 +339,7 @@ export default function DashboardPage() {
           active={statusFilter === 'occupied'}
         />
         <StatsCard
-          title="Available" value={stats?.availableBeds ?? 0} icon={<DoNotDisturbIcon />} color="#d32f2f"
+          title="Empty" value={stats?.availableBeds ?? 0} icon={<DoNotDisturbIcon />} color="#d32f2f"
           onClick={() => setStatusFilter(s => s === 'available' ? '' : 'available')}
           active={statusFilter === 'available'}
         />
@@ -337,7 +370,7 @@ export default function DashboardPage() {
             size="small" sx={{ minWidth: 120 }}
           >
             <MenuItem value="">All BUs</MenuItem>
-            {uniqueBUs.map(bu => <MenuItem key={bu} value={bu}>{bu}</MenuItem>)}
+            {buOptions.map(bu => <MenuItem key={bu} value={bu}>{bu}</MenuItem>)}
           </TextField>
           <TextField
             select label="Property Type" value={typeFilter}
@@ -355,7 +388,7 @@ export default function DashboardPage() {
             <MenuItem value="">All statuses</MenuItem>
             <MenuItem value="occupied"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#2e7d32' }} />Occupied</Box></MenuItem>
             <MenuItem value="onradar"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ef6c00' }} />On Radar</Box></MenuItem>
-            <MenuItem value="available"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#d32f2f' }} />Available</Box></MenuItem>
+            <MenuItem value="available"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#d32f2f' }} />Empty</Box></MenuItem>
           </TextField>
           <TextField
             label="Area / Location" value={areaFilter}
@@ -405,20 +438,26 @@ export default function DashboardPage() {
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Property Occupancy &amp; Revenue</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="body2" color="text.secondary">{filteredPropertyRows.length} propert{filteredPropertyRows.length !== 1 ? 'ies' : 'y'}</Typography>
-          <Tooltip title="Reset column visibility"><IconButton size="small" onClick={resetPropView}><RestoreIcon fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title="Reset column layout"><IconButton size="small" onClick={resetPropView}><RestoreIcon fontSize="small" /></IconButton></Tooltip>
         </Box>
       </Box>
       <Box sx={{ height: 320, mb: 3 }}>
         <DataGrid
+          key={propGridKey}
           rows={filteredPropertyRows}
           columns={propertyColumns}
           pageSizeOptions={[10, 25]}
-          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          initialState={{
+            pagination: { paginationModel: { pageSize: 10 } },
+            columns: { dimensions: initialColDimensions },
+          }}
           disableRowSelectionOnClick
-
           columnVisibilityModel={propColVis}
           onColumnVisibilityModelChange={handlePropColVisChange}
+          onColumnWidthChange={handleColumnWidthChange}
           onRowDoubleClick={params => setSelectedPropertyId(id => id === params.row.id ? null : params.row.id)}
+          slots={{ footer: CustomGridFooter }}
+          slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
           sx={{
             border: '1px solid #e0e0e0',
             '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6', fontWeight: 700 },
@@ -456,7 +495,8 @@ export default function DashboardPage() {
             pageSizeOptions={[25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
             disableRowSelectionOnClick
-  
+            slots={{ footer: CustomGridFooter }}
+            slotProps={{ footer: { pageSizeOptions: [25, 50] } }}
             sx={{
               border: 'none',
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6', fontWeight: 700 },

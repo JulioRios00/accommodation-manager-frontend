@@ -7,6 +7,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getServiceProviders, createServiceProvider, updateServiceProvider, deleteServiceProvider, ServiceProvider } from '@/services/api';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import ServiceProviderDialog from '@/components/crud/ServiceProviderDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -55,7 +56,9 @@ export default function ServiceProvidersPage() {
         {can('property:write') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
       </Box>
       <DataGrid rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
-        pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} />
+        pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        slots={{ footer: CustomGridFooter }}
+        slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />
       <ServiceProviderDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />
       <ConfirmDialog open={!!deleteId} title="Delete Service Provider" message="This action cannot be undone."
         onConfirm={async () => { await deleteServiceProvider(deleteId!); setDeleteId(null); await load(); }} onCancel={() => setDeleteId(null)} />

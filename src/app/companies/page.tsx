@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import { getCompanies, createCompany, updateCompany, deleteCompany, Company } from '@/services/api';
 import CompanyDialog from '@/components/crud/CompanyDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
@@ -53,6 +54,8 @@ export default function CompaniesPage() {
       <DataGrid
         rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
         pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        slots={{ footer: CustomGridFooter }}
+        slotProps={{ footer: { pageSizeOptions: [25, 50] } }}
         sx={{
           border: 'none',
           '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },

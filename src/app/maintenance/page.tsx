@@ -11,6 +11,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LockIcon from '@mui/icons-material/Lock';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
   getMaintenanceTickets, getMaintenanceQueue,
   createMaintenanceTicket, updateMaintenanceTicket, deleteMaintenanceTicket,
@@ -297,6 +298,8 @@ export default function MaintenancePage() {
             autoHeight disableRowSelectionOnClick
             pageSizeOptions={[25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+            slots={{ footer: CustomGridFooter }}
+            slotProps={{ footer: { pageSizeOptions: [25, 50] } }}
             sx={{
               border: 'none',
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },

@@ -7,6 +7,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getLandlords, createLandlord, updateLandlord, deleteLandlord, Landlord } from '@/services/api';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import LandlordDialog from '@/components/crud/LandlordDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -75,7 +76,9 @@ export default function LandlordsPage() {
         )}
       </Box>
       <DataGrid rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
-        pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} />
+        pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        slots={{ footer: CustomGridFooter }}
+        slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />
       <LandlordDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />
       <ConfirmDialog open={!!deleteId} title="Delete Landlord" message="This action cannot be undone."
         onConfirm={handleDelete} onCancel={() => setDeleteId(null)} />

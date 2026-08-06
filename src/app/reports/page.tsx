@@ -4,6 +4,7 @@ import { Typography, Box, Button, TextField, InputAdornment, MenuItem, Chip } fr
 import DownloadIcon from '@mui/icons-material/Download';
 import SearchIcon from '@mui/icons-material/Search';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import { getDelinquencyReport, DelinquencyRow } from '@/services/api';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || ''; // empty = relative URL, handled by Vercel rewrites
@@ -74,6 +75,8 @@ export default function ReportsPage() {
       {searched && (
         <DataGrid rows={rows.map((r, i) => ({ ...r, _id: i }))} columns={columns} getRowId={r => r._id} autoHeight disableRowSelectionOnClick
           pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+          slots={{ footer: CustomGridFooter }}
+          slotProps={{ footer: { pageSizeOptions: [25, 50] } }}
           sx={{ '& .MuiDataGrid-row': { cursor: 'default' } }}
         />
       )}

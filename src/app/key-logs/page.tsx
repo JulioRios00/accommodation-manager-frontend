@@ -7,6 +7,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getKeyLogs, createKeyLog, updateKeyLog, deleteKeyLog, KeyLog } from '@/services/api';
+import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import KeyLogDialog from '@/components/crud/KeyLogDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -60,7 +61,9 @@ export default function KeyLogsPage() {
         {can('property:write') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Log Key</Button>}
       </Box>
       <DataGrid rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
-        pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} />
+        pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        slots={{ footer: CustomGridFooter }}
+        slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />
       <KeyLogDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)}
         onSave={async (data, id) => { if (id) await updateKeyLog(id, data); else await createKeyLog(data); await load(); }} />
       <ConfirmDialog open={!!deleteId} title="Delete Key Log" message="This action cannot be undone."
