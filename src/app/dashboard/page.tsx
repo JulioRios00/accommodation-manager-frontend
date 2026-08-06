@@ -18,7 +18,7 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import ClearIcon from '@mui/icons-material/Clear';
 import StatsCard from '@/components/dashboard/StatsCard';
 import XlsxUploader from '@/components/upload/XlsxUploader';
-import { getDashboardStats, getProperties, getBeds, DashboardStats, Bed, Property } from '@/services/api';
+import { getDashboardStats, getProperties, getBeds, getResidents, DashboardStats, Bed, Property, Resident } from '@/services/api';
 import { useRole } from '@/hooks/useRole';
 
 const PROPERTY_TYPES = ['House', 'Apartment', 'Duplex', 'Studio Block', 'Other'];
@@ -55,6 +55,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
   const [importOpen, setImportOpen] = useState(false);
 
   // Filter state
@@ -84,12 +85,15 @@ export default function DashboardPage() {
     try { localStorage.removeItem(PROP_COL_VIS_KEY); } catch { }
   };
 
+  const residentMap = useMemo(() => new Map(residents.map(r => [r.id, r.fullName])), [residents]);
+
   const loadData = useCallback(async () => {
     try {
-      const [s, props, bds] = await Promise.all([getDashboardStats(), getProperties(), getBeds()]);
+      const [s, props, bds, res] = await Promise.all([getDashboardStats(), getProperties(), getBeds(), getResidents()]);
       setStats(s);
       setProperties(props);
       setBeds(bds);
+      setResidents(res);
     } catch { }
   }, []);
 
@@ -196,12 +200,12 @@ export default function DashboardPage() {
         rentAmount: bed.rentAmount,
         depositAmount: bed.depositAmount,
         status: bed.status === 'allocated' ? 'Occupied' : 'Available',
-        residentName: bed.activeBooking?.resident?.fullName ?? (bed.activeBooking?.residentId ? '—' : '—'),
+        residentName: bed.activeBooking?.residentId ? (residentMap.get(bed.activeBooking.residentId) ?? '—') : '—',
         checkIn: formatDate(bed.activeBooking?.checkInDate),
         contractEnd: formatDate(bed.activeBooking?.contractEndDate),
         daysLeft: daysUntil(bed.activeBooking?.contractEndDate),
       }));
-  }, [beds, allowedPropertyIds, selectedPropertyId, typeFilter, buFilter, areaFilter, availWindow, statusFilter]);
+  }, [beds, residentMap, allowedPropertyIds, selectedPropertyId, typeFilter, buFilter, areaFilter, availWindow, statusFilter]);
 
   // ── Filtered totals ──────────────────────────────────────────────────────
   const filteredMonthly = useMemo(() => filteredPropertyRows.reduce((s, r) => s + r.monthly, 0), [filteredPropertyRows]);

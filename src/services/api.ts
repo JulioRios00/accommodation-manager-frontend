@@ -526,6 +526,19 @@ export const getPortalProfile = () => api.get<PortalProfile>('/portal/me').then(
 export const submitResidentTicket = (data: { category: string; title: string; description?: string | null }) =>
   api.post<MaintenanceTicket>('/portal/tickets', data).then(r => r.data);
 
+// User Management
+export interface ClerkUser {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  imageUrl: string;
+  createdAt: number;
+}
+export const getUsers = () => api.get<ClerkUser[]>('/users').then(r => r.data);
+export const updateUserRole = (clerkId: string, role: string) =>
+  api.patch(`/users/${clerkId}`, { role }).then(r => r.data);
+
 // Reports
 export const getDelinquencyReport = (params?: { propertyId?: string; month?: string }) =>
   api.get<DelinquencyRow[]>('/reports/delinquency', { params }).then(r => r.data);

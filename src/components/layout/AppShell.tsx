@@ -31,32 +31,37 @@ import PaymentsIcon from '@mui/icons-material/Payments';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import BusinessIcon from '@mui/icons-material/Business';
 import UploadIcon from '@mui/icons-material/Upload';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import appTheme from '@/theme';
+import { useRole } from '@/hooks/useRole';
 
 const DRAWER_WIDTH = 220;
 const SIDEBAR_BG = '#424242';
 
-const navItems = [
-  { label: 'Dashboard',         href: '/dashboard',         icon: <DashboardIcon /> },
-  { label: 'Properties',        href: '/properties',        icon: <ApartmentIcon /> },
-  { label: 'Beds',              href: '/beds',              icon: <BedIcon /> },
-  { label: 'Residents',         href: '/residents',         icon: <PeopleIcon /> },
-  { label: 'Bookings',          href: '/bookings',          icon: <BookOnlineIcon /> },
-  { label: 'Landlords',         href: '/landlords',         icon: <PersonIcon /> },
-  { label: 'Service Providers', href: '/service-providers', icon: <EngineeringIcon /> },
-  { label: 'Maintenance',       href: '/maintenance',       icon: <HandymanIcon /> },
-  { label: 'Key Log',           href: '/key-logs',          icon: <VpnKeyIcon /> },
-  { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon /> },
-  { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon /> },
-  { label: 'Companies',         href: '/companies',         icon: <BusinessIcon /> },
-  { label: 'Import Data',       href: '/import',            icon: <UploadIcon /> },
+const ALL_NAV_ITEMS = [
+  { label: 'Dashboard',         href: '/dashboard',         icon: <DashboardIcon />,  roles: null },
+  { label: 'Properties',        href: '/properties',        icon: <ApartmentIcon />,  roles: null },
+  { label: 'Beds',              href: '/beds',              icon: <BedIcon />,         roles: null },
+  { label: 'Residents',         href: '/residents',         icon: <PeopleIcon />,      roles: null },
+  { label: 'Bookings',          href: '/bookings',          icon: <BookOnlineIcon />,  roles: null },
+  { label: 'Landlords',         href: '/landlords',         icon: <PersonIcon />,      roles: null },
+  { label: 'Service Providers', href: '/service-providers', icon: <EngineeringIcon />, roles: null },
+  { label: 'Maintenance',       href: '/maintenance',       icon: <HandymanIcon />,    roles: null },
+  { label: 'Key Log',           href: '/key-logs',          icon: <VpnKeyIcon />,      roles: null },
+  { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon />,    roles: null },
+  { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon />,  roles: null },
+  { label: 'Companies',         href: '/companies',         icon: <BusinessIcon />,    roles: null },
+  { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      roles: null },
+  { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   roles: ['sysadmin', 'manager'] },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { role } = useRole();
+  const navItems = ALL_NAV_ITEMS.filter(item => !item.roles || item.roles.includes(role));
   return (
     <>
       <Box sx={{ p: 2.5, pb: 1.5 }}>
