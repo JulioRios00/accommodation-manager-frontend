@@ -204,7 +204,9 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
           </Grid>
           <Grid size={{ xs: 3 }}>
             <TextField select label="Urgency" value={form.urgency} onChange={e => set('urgency', e.target.value)} fullWidth size="small">
-              {['Low', 'Middle', 'High'].map(u => <MenuItem key={u} value={u}>{u}</MenuItem>)}
+              <MenuItem value="Low">Routine</MenuItem>
+              <MenuItem value="Middle">Urgent</MenuItem>
+              <MenuItem value="High">Emergency</MenuItem>
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}>
@@ -222,7 +224,10 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
           </Grid>
           <Grid size={{ xs: 3 }}>
             <TextField select label="Status" value={form.status} onChange={e => set('status', e.target.value)} fullWidth size="small">
-              {['open', 'in_progress', 'completed', 'cancelled'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+              <MenuItem value="open">Open</MenuItem>
+              <MenuItem value="in_progress">In Progress</MenuItem>
+              <MenuItem value="completed">Completed</MenuItem>
+              <MenuItem value="cancelled">Cancelled</MenuItem>
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}>

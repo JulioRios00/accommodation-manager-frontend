@@ -21,7 +21,7 @@ export default function CompanyDialog({ open, initial, onClose, onSave }: Props)
         <Grid container spacing={2}>
           <Grid size={{ xs: 12 }}><TextField label="Company Name" value={form.name} onChange={e => set('name', e.target.value)} fullWidth required size="small" /></Grid>
           <Grid size={{ xs: 6 }}><TextField label="Email" value={form.contactEmail ?? ''} onChange={e => set('contactEmail', e.target.value)} fullWidth size="small" /></Grid>
-          <Grid size={{ xs: 6 }}><TextField label="Phone" value={form.phone ?? ''} onChange={e => set('phone', e.target.value)} fullWidth size="small" /></Grid>
+          <Grid size={{ xs: 6 }}><TextField label="Phone" value={form.phone ?? ''} onChange={e => set('phone', e.target.value.replace(/[^\d\s+\-()]/g, ''))} fullWidth size="small" slotProps={{ htmlInput: { inputMode: 'tel' } }} /></Grid>
           <Grid size={{ xs: 12 }}><TextField label="Address" value={form.address ?? ''} onChange={e => set('address', e.target.value)} fullWidth size="small" multiline rows={2} /></Grid>
         </Grid>
       </DialogContent>

@@ -147,6 +147,7 @@ export default function BedsPage() {
       <Box sx={{ width: '100%', overflow: 'auto' }}>
         <Box sx={{ height: 500, minWidth: 800, bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
           <DataGrid
+
             rows={filtered}
             columns={columns}
             pageSizeOptions={[10, 25]}
@@ -156,6 +157,7 @@ export default function BedsPage() {
               border: 'none',
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
               '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+              '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
             }}
           />
         </Box>

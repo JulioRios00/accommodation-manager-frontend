@@ -7,9 +7,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import {
-  getBookings, getBeds, getResidents,
+  getBookings, getBeds, getResidents, getProperties,
   createBooking, updateBooking, deleteBooking,
-  Booking, Bed, Resident,
+  Booking, Bed, Resident, Property,
 } from '@/services/api';
 import BookingDialog from '@/components/crud/BookingDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
@@ -28,6 +28,7 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [filter, setFilter] = useState('');
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,6 +41,7 @@ export default function BookingsPage() {
   useEffect(() => {
     getBeds().then(setBeds).catch(() => {});
     getResidents().then(setResidents).catch(() => {});
+    getProperties().then(setProperties).catch(() => {});
   }, []);
 
   const handleSave = async (data: Omit<Booking, 'id' | 'resident' | 'bed'>, id?: string) => {
@@ -152,10 +154,12 @@ export default function BookingsPage() {
             pageSizeOptions={[10, 25]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             disableRowSelectionOnClick
+
             sx={{
               border: 'none',
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
               '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+              '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
             }}
           />
         </Box>
@@ -166,6 +170,7 @@ export default function BookingsPage() {
         initial={editing}
         beds={beds}
         residents={residents}
+        properties={properties}
         onClose={() => setDialogOpen(false)}
         onSave={handleSave}
       />

@@ -21,12 +21,71 @@ import MaintenanceTicketDialog from '@/components/crud/MaintenanceTicketDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
 
-const statusColor: Record<string, 'default' | 'warning' | 'info' | 'success' | 'error'> = {
-  open: 'warning', in_progress: 'info', completed: 'success', cancelled: 'error',
+// ── Display maps ────────────────────────────────────────────────────────────
+const URGENCY_LABEL: Record<string, string> = {
+  Low: 'Routine', Middle: 'Urgent', High: 'Emergency',
 };
-const urgencyColor: Record<string, 'default' | 'warning' | 'error'> = {
-  Low: 'default', Middle: 'warning', High: 'error',
+const STATUS_LABEL: Record<string, string> = {
+  open: 'Open', in_progress: 'In Progress', completed: 'Completed', cancelled: 'Cancelled',
 };
+
+// Urgency chip: Routine=ORANGE, Urgent=RED, Emergency=DARK RED
+function UrgencyChip({ urgency, size = 'small' }: { urgency: string; size?: 'small' | 'medium' }) {
+  const label = URGENCY_LABEL[urgency] ?? urgency;
+  const sx =
+    urgency === 'High'
+      ? { bgcolor: '#7b0000', color: 'white', fontWeight: 700 }
+      : urgency === 'Middle'
+      ? { bgcolor: '#d32f2f', color: 'white', fontWeight: 700 }
+      : { bgcolor: '#ef6c00', color: 'white', fontWeight: 700 };
+  return <Chip label={label} size={size} sx={sx} />;
+}
+
+// Status chip
+function StatusChip({ status, size = 'small' }: { status: string; size?: 'small' | 'medium' }) {
+  const label = STATUS_LABEL[status] ?? status;
+  const sx: Record<string, object> = {
+    open: { bgcolor: '#d32f2f', color: 'white', fontWeight: 700 },
+    in_progress: { bgcolor: '#ef6c00', color: 'white', fontWeight: 700 },
+    completed: { bgcolor: '#2e7d32', color: 'white', fontWeight: 700 },
+    cancelled: { bgcolor: '#9e9e9e', color: 'white', fontWeight: 700 },
+  };
+  return <Chip label={label} size={size} sx={sx[status] ?? { fontWeight: 700 }} />;
+}
+
+// ── Due date helpers ─────────────────────────────────────────────────────────
+const URGENCY_DAYS: Record<string, number> = { High: 1, Middle: 7, Low: 21 };
+
+function dueDate(ticket: MaintenanceTicket): Date | null {
+  if (!ticket.createdAt) return null;
+  const days = URGENCY_DAYS[ticket.urgency];
+  if (days === undefined) return null;
+  const d = new Date(ticket.createdAt);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function daysLeft(ticket: MaintenanceTicket): number | null {
+  const due = dueDate(ticket);
+  if (!due) return null;
+  return Math.ceil((due.getTime() - Date.now()) / 86400000);
+}
+
+function formatDate(d: string | Date | null | undefined): string {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB');
+}
+
+// Effective urgency for FCFS sorting: Routine auto-upgrades to Urgent when ≤7 days to due
+function effectiveUrgencyPriority(ticket: MaintenanceTicket): number {
+  // Higher = more urgent (sorted first)
+  if (ticket.urgency === 'High') return 3;
+  if (ticket.urgency === 'Middle') return 2;
+  // Low (Routine): auto-upgrade if due within 7 days
+  const dl = daysLeft(ticket);
+  if (dl !== null && dl <= 7) return 2;
+  return 1;
+}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -40,17 +99,14 @@ export default function MaintenancePage() {
   const { can } = useRole();
   const [tab, setTab] = useState(0);
 
-  // All-tickets state
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  // Queue state
   const [queue, setQueue] = useState<MaintenanceTicket[]>([]);
   const [queueLoading, setQueueLoading] = useState(false);
   const [claiming, setClaiming] = useState<string | null>(null);
 
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MaintenanceTicket | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -58,7 +114,19 @@ export default function MaintenancePage() {
   const loadAll = () => getMaintenanceTickets().then(setTickets).catch(() => {});
   const loadQueue = () => {
     setQueueLoading(true);
-    getMaintenanceQueue().then(setQueue).catch(() => {}).finally(() => setQueueLoading(false));
+    getMaintenanceQueue()
+      .then(data => {
+        // Smart FCFS: Emergency first, then Urgent (+ auto-upgraded Routine), then Routine; within same level by submission date
+        const sorted = [...data].sort((a, b) => {
+          const pa = effectiveUrgencyPriority(a);
+          const pb = effectiveUrgencyPriority(b);
+          if (pb !== pa) return pb - pa;
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+        setQueue(sorted);
+      })
+      .catch(() => {})
+      .finally(() => setQueueLoading(false));
   };
 
   useEffect(() => { loadAll(); }, []);
@@ -82,7 +150,6 @@ export default function MaintenancePage() {
     await updateMaintenanceTicket(ticket.id, { ...ticket, urgency: newUrgency });
   };
 
-  // Gap B: claim directly from queue row without opening dialog
   const handleQuickClaim = async (ticket: MaintenanceTicket) => {
     setClaiming(ticket.id);
     try {
@@ -101,7 +168,7 @@ export default function MaintenancePage() {
     { field: 'orderNumber', headerName: 'Order #', width: 100 },
     { field: 'title', headerName: 'Title', minWidth: 200, flex: 1 },
     {
-      field: 'urgency', headerName: 'Urgency', width: 140,
+      field: 'urgency', headerName: 'Urgency', width: 150,
       renderCell: (p) => can('property:write') ? (
         <Select
           value={p.value as string}
@@ -109,13 +176,13 @@ export default function MaintenancePage() {
           size="small" variant="outlined"
           onClick={ev => ev.stopPropagation()}
           sx={{ fontSize: 13, height: 28, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' } }}
-          renderValue={(v) => <Chip label={v} color={urgencyColor[v] ?? 'default'} size="small" sx={{ pointerEvents: 'none' }} />}
+          renderValue={(v) => <UrgencyChip urgency={v} />}
         >
           {['Low', 'Middle', 'High'].map(u => (
-            <MenuItem key={u} value={u}><Chip label={u} color={urgencyColor[u] ?? 'default'} size="small" /></MenuItem>
+            <MenuItem key={u} value={u}><UrgencyChip urgency={u} /></MenuItem>
           ))}
         </Select>
-      ) : <Chip label={p.value} color={urgencyColor[p.value as string] ?? 'default'} size="small" />,
+      ) : <UrgencyChip urgency={p.value as string} />,
     },
     {
       field: 'status', headerName: 'Status', width: 160,
@@ -126,15 +193,41 @@ export default function MaintenancePage() {
           size="small" variant="outlined"
           onClick={ev => ev.stopPropagation()}
           sx={{ fontSize: 13, height: 28, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' } }}
-          renderValue={(v) => <Chip label={v} color={statusColor[v] ?? 'default'} size="small" sx={{ pointerEvents: 'none' }} />}
+          renderValue={(v) => <StatusChip status={v} />}
         >
           {['open', 'in_progress', 'completed', 'cancelled'].map(s => (
-            <MenuItem key={s} value={s}><Chip label={s} color={statusColor[s] ?? 'default'} size="small" /></MenuItem>
+            <MenuItem key={s} value={s}><StatusChip status={s} /></MenuItem>
           ))}
         </Select>
-      ) : <Chip label={p.value} color={statusColor[p.value as string] ?? 'default'} size="small" />,
+      ) : <StatusChip status={p.value as string} />,
     },
-    { field: 'clientName', headerName: 'Client', width: 150 },
+    {
+      field: 'createdAt', headerName: 'Submitted', width: 105,
+      renderCell: p => <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}><Typography variant="body2">{formatDate(p.value as string)}</Typography></Box>,
+    },
+    {
+      field: '_dueDate', headerName: 'Due Date', width: 105,
+      sortable: false,
+      renderCell: p => {
+        const due = dueDate(p.row as MaintenanceTicket);
+        return <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}><Typography variant="body2">{due ? formatDate(due) : '—'}</Typography></Box>;
+      },
+    },
+    {
+      field: '_daysLeft', headerName: 'Days Left', width: 100,
+      sortable: false,
+      renderCell: p => {
+        const ticket = p.row as MaintenanceTicket;
+        if (ticket.status === 'completed' || ticket.status === 'cancelled') return '—';
+        const dl = daysLeft(ticket);
+        if (dl === null) return '—';
+        if (dl < 0) return <Chip label="Overdue" size="small" sx={{ bgcolor: '#7b0000', color: 'white', fontWeight: 700 }} />;
+        if (dl === 0) return <Chip label="Today" size="small" sx={{ bgcolor: '#d32f2f', color: 'white', fontWeight: 700 }} />;
+        if (dl <= 3) return <Chip label={`${dl}d`} size="small" sx={{ bgcolor: '#ef6c00', color: 'white', fontWeight: 700 }} />;
+        return <Typography variant="body2">{dl}d</Typography>;
+      },
+    },
+    { field: 'clientName', headerName: 'Client', width: 140 },
     { field: 'totalCost', headerName: 'Total (€)', width: 100, type: 'number' },
     {
       field: 'actions', headerName: '', width: 90, sortable: false,
@@ -194,8 +287,9 @@ export default function MaintenancePage() {
               size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
               slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
             />
-            <TextField select size="small" label="Status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} sx={{ width: 140 }}>
-              {['', 'open', 'in_progress', 'completed', 'cancelled'].map(s => <MenuItem key={s} value={s}>{s || 'All'}</MenuItem>)}
+            <TextField select size="small" label="Status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} sx={{ width: 160 }}>
+              <MenuItem value="">All</MenuItem>
+              {Object.entries(STATUS_LABEL).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
             </TextField>
           </Box>
           <DataGrid
@@ -203,11 +297,17 @@ export default function MaintenancePage() {
             autoHeight disableRowSelectionOnClick
             pageSizeOptions={[25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+            sx={{
+              border: 'none',
+              '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
+              '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+              '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
+            }}
           />
         </>
       )}
 
-      {/* ── Tab 1: FCFS Queue (Gaps A, B, G) ── */}
+      {/* ── Tab 1: FCFS Queue (smart sort) ── */}
       {tab === 1 && (
         <Box>
           {queueLoading ? (
@@ -218,55 +318,70 @@ export default function MaintenancePage() {
             </Paper>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              {queue.map((ticket, idx) => (
-                <Paper
-                  key={ticket.id}
-                  variant="outlined"
-                  sx={{
-                    p: 2, borderRadius: 2, borderLeft: 4,
-                    borderLeftColor: idx === 0 ? '#DE9151' : 'divider',
-                    bgcolor: idx === 0 ? '#FFF9F3' : 'background.paper',
-                    cursor: 'pointer', '&:hover': { bgcolor: '#FFF0E6' },
-                  }}
-                  onClick={() => openDetail(ticket)}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, color: 'text.secondary', minWidth: 70 }}>
-                      #{idx + 1} {ticket.orderNumber}
-                    </Typography>
-                    <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>{ticket.title}</Typography>
-                    {ticket.category && (
-                      <Chip label={ticket.category} size="small" variant="outlined" sx={{ fontSize: 11 }} />
+              {queue.map((ticket, idx) => {
+                const ep = effectiveUrgencyPriority(ticket);
+                const isAutoUpgraded = ticket.urgency === 'Low' && ep === 2;
+                const dl = daysLeft(ticket);
+                return (
+                  <Paper
+                    key={ticket.id}
+                    variant="outlined"
+                    sx={{
+                      p: 2, borderRadius: 2, borderLeft: 4,
+                      borderLeftColor: idx === 0 ? '#DE9151' : 'divider',
+                      bgcolor: idx === 0 ? '#FFF9F3' : 'background.paper',
+                      cursor: 'pointer', '&:hover': { bgcolor: '#FFF0E6' },
+                    }}
+                    onClick={() => openDetail(ticket)}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, color: 'text.secondary', minWidth: 70 }}>
+                        #{idx + 1} {ticket.orderNumber}
+                      </Typography>
+                      <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>{ticket.title}</Typography>
+                      {ticket.category && (
+                        <Chip label={ticket.category} size="small" variant="outlined" sx={{ fontSize: 11 }} />
+                      )}
+                      <UrgencyChip urgency={ticket.urgency} />
+                      {isAutoUpgraded && (
+                        <Chip label="⬆ auto-upgraded" size="small" sx={{ bgcolor: '#ef6c00', color: 'white', fontSize: 10 }} />
+                      )}
+                      <StatusChip status={ticket.status} />
+                      {dl !== null && dl >= 0 && (
+                        <Typography variant="caption" color={dl <= 3 ? 'error' : 'text.secondary'} sx={{ minWidth: 50 }}>
+                          {dl}d left
+                        </Typography>
+                      )}
+                      {dl !== null && dl < 0 && (
+                        <Chip label="Overdue" size="small" sx={{ bgcolor: '#7b0000', color: 'white', fontWeight: 700 }} />
+                      )}
+                      <Typography variant="caption" color="text.secondary" sx={{ minWidth: 60 }}>
+                        {timeAgo(ticket.createdAt)}
+                      </Typography>
+                      {can('property:write') && ticket.status === 'open' && (
+                        <Tooltip title="Claim this ticket — locks it to you">
+                          <span>
+                            <Button
+                              size="small" variant="contained" color="warning"
+                              startIcon={<LockIcon sx={{ fontSize: 14 }} />}
+                              disabled={claiming === ticket.id}
+                              onClick={e => { e.stopPropagation(); handleQuickClaim(ticket); }}
+                              sx={{ fontSize: 12 }}
+                            >
+                              {claiming === ticket.id ? 'Claiming…' : 'Claim'}
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      )}
+                    </Box>
+                    {ticket.descriptionRequested && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        {ticket.descriptionRequested.slice(0, 120)}{ticket.descriptionRequested.length > 120 ? '…' : ''}
+                      </Typography>
                     )}
-                    <Chip label={ticket.urgency} color={urgencyColor[ticket.urgency] ?? 'default'} size="small" />
-                    <Chip label={ticket.status} color={statusColor[ticket.status] ?? 'default'} size="small" />
-                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 60 }}>
-                      {timeAgo(ticket.createdAt)}
-                    </Typography>
-                    {/* Gap B: quick claim without opening the dialog */}
-                    {can('property:write') && ticket.status === 'open' && (
-                      <Tooltip title="Claim this ticket — locks it to you">
-                        <span>
-                          <Button
-                            size="small" variant="contained" color="warning"
-                            startIcon={<LockIcon sx={{ fontSize: 14 }} />}
-                            disabled={claiming === ticket.id}
-                            onClick={e => { e.stopPropagation(); handleQuickClaim(ticket); }}
-                            sx={{ fontSize: 12 }}
-                          >
-                            {claiming === ticket.id ? 'Claiming…' : 'Claim'}
-                          </Button>
-                        </span>
-                      </Tooltip>
-                    )}
-                  </Box>
-                  {ticket.descriptionRequested && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      {ticket.descriptionRequested.slice(0, 120)}{ticket.descriptionRequested.length > 120 ? '…' : ''}
-                    </Typography>
-                  )}
-                </Paper>
-              ))}
+                  </Paper>
+                );
+              })}
             </Box>
           )}
         </Box>

@@ -78,7 +78,7 @@ export default function ReportsPage() {
         />
       )}
       {searched && rows.length === 0 && !loading && (
-        <Typography color="text.secondary" sx={{ mt: 4, textAlign: 'center' }}>No delinquent records found.</Typography>
+        <Typography color="text.secondary" sx={{ mt: 4, textAlign: 'center' }}>No bad debtor records found.</Typography>
       )}
     </Box>
   );

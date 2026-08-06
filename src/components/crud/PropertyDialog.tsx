@@ -1,18 +1,18 @@
 'use client';
 import { useEffect, useState } from 'react';
 import {
-  Accordion, AccordionDetails, AccordionSummary,
+  Accordion, AccordionDetails, AccordionSummary, Alert,
   Button, Dialog, DialogActions, DialogContent, DialogTitle,
   Grid, MenuItem, TextField, Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { Property, Landlord } from '@/services/api';
+import { Property, Landlord, Company, ServiceProvider, getCompanies, getServiceProviders } from '@/services/api';
 
 type FormState = Omit<Property, 'id'>;
 
 const empty: FormState = {
   code: '', bu: '', area: '', fullAddress: '',
-  officeKeysCount: 0, keysCount: 0, securityKeysCount: 0, fobCount: 0, keyCode: '',
+  officeKeysCount: 0, officeKeysComment: null, keysCount: 0, securityKeysCount: 0, fobCount: 0, keyCode: '',
   electricityStatus: '', electricityMprn: '', electricitySupplier: '',
   electricityAccountNumber: '', electricityKeypadCode: '',
   gasStatus: '', gasGprn: '', gasSupplier: '', gasAccountNumber: '', gasPin: '',
@@ -26,6 +26,7 @@ const empty: FormState = {
   salesDescription: '',
   eirCode: null, propertyType: null,
   crn: null, propertyEmail: null,
+  paymentReference: null, propertySupplier: null,
   landlordId: null,
 };
 
@@ -44,23 +45,44 @@ interface Props {
 export default function PropertyDialog({ open, initial, onClose, onSave, landlords = [] }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [providers, setProviders] = useState<ServiceProvider[]>([]);
 
   useEffect(() => {
     setForm(initial ? { ...initial } : { ...empty });
+    setError(null);
   }, [initial, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    getCompanies().then(setCompanies).catch(() => {});
+    getServiceProviders().then(setProviders).catch(() => {});
+  }, [open]);
 
   const set = (field: keyof FormState, value: unknown) =>
     setForm(f => ({ ...f, [field]: value === '' ? null : value }));
 
+  const hasOfficeKeys = (form.officeKeysCount ?? 0) > 0;
+
   const handleSave = async () => {
+    setError(null);
     setSaving(true);
     try {
       await onSave(form, initial?.id);
       onClose();
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? e?.message ?? 'Failed to save property. Please try again.');
     } finally {
       setSaving(false);
     }
   };
+
+  // Canonical list of company names for BU dropdown
+  const buOptions = companies.map(c => c.name).filter(Boolean);
+
+  // Supplier options: service provider names
+  const supplierOptions = providers.map(p => p.name);
 
   const tf = (label: string, field: keyof FormState, opts?: { type?: string; xs?: number }) => (
     <Grid size={{ xs: opts?.xs ?? 6 }}>
@@ -82,46 +104,77 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
     </Grid>
   );
 
+  // Supplier field: shows service provider names as options but also allows free text
+  const supplierField = (label: string, field: keyof FormState, xs = 6) => (
+    <Grid size={{ xs }}>
+      <TextField
+        select={supplierOptions.length > 0}
+        label={label}
+        value={(form[field] as string) ?? ''}
+        onChange={e => set(field, e.target.value)}
+        fullWidth size="small"
+
+      >
+        {supplierOptions.length > 0 && [
+          <MenuItem key="" value=""><em>None / custom</em></MenuItem>,
+          ...supplierOptions.map(n => <MenuItem key={n} value={n}>{n}</MenuItem>),
+        ]}
+      </TextField>
+    </Grid>
+  );
+
+  const canSave = !!form.code && !!form.bu && !!form.fullAddress && !!form.propertyType && !!form.eirCode;
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{initial ? 'Edit Property' : 'New Property'}</DialogTitle>
       <DialogContent dividers sx={{ p: 2 }}>
 
-        {/* Basic info — always visible */}
+        {error && <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>{error}</Alert>}
+
+        {/* Basic info */}
         <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid size={{ xs: 3 }}>
-            <TextField label="Code" value={form.code} onChange={e => set('code', e.target.value)} fullWidth required size="small" />
+            <TextField label="Code *" value={form.code} onChange={e => set('code', e.target.value)} fullWidth required size="small" />
           </Grid>
           <Grid size={{ xs: 3 }}>
-            <TextField label="BU" value={form.bu} onChange={e => set('bu', e.target.value)} fullWidth required size="small" />
+            {buOptions.length > 0 ? (
+              <TextField select label="BU *" value={form.bu ?? ''} onChange={e => set('bu', e.target.value)} fullWidth required size="small">
+                {buOptions.map(b => <MenuItem key={b} value={b}>{b}</MenuItem>)}
+              </TextField>
+            ) : (
+              <TextField label="BU *" value={form.bu ?? ''} onChange={e => set('bu', e.target.value)} fullWidth required size="small" helperText="Add companies first to get a dropdown" />
+            )}
           </Grid>
           <Grid size={{ xs: 3 }}>
             <TextField label="Area" value={form.area ?? ''} onChange={e => set('area', e.target.value)} fullWidth size="small" />
           </Grid>
           <Grid size={{ xs: 3 }}>
-            <TextField label="CRN" value={form.crn ?? ''} onChange={e => set('crn', e.target.value)} fullWidth size="small" />
-          </Grid>
-          <Grid size={{ xs: 6 }}>
-            <TextField label="Full Address" value={form.fullAddress ?? ''} onChange={e => set('fullAddress', e.target.value)} fullWidth size="small" multiline rows={2} />
-          </Grid>
-          <Grid size={{ xs: 3 }}>
             <TextField
-              label="Eircode"
-              value={form.eirCode ?? ''}
-              onChange={e => set('eirCode', e.target.value)}
-              onBlur={e => set('eirCode', e.target.value.trim().toUpperCase() || null)}
-              fullWidth size="small"
-              slotProps={{ htmlInput: { maxLength: 10 } }}
-            />
-          </Grid>
-          <Grid size={{ xs: 3 }}>
-            <TextField select label="Property Type" value={form.propertyType ?? ''} onChange={e => set('propertyType', e.target.value)} fullWidth size="small">
+              select label="Property Type *" value={form.propertyType ?? ''} onChange={e => set('propertyType', e.target.value)} fullWidth required size="small"
+            >
               <MenuItem value=""><em>—</em></MenuItem>
               {PROPERTY_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}>
-            <TextField label="Admin Email" value={form.propertyEmail ?? ''} onChange={e => set('propertyEmail', e.target.value)} fullWidth size="small" />
+            <TextField
+              label="Full Address *" value={form.fullAddress ?? ''} onChange={e => set('fullAddress', e.target.value)}
+              fullWidth required size="small" multiline rows={2}
+            />
+          </Grid>
+          <Grid size={{ xs: 3 }}>
+            <TextField
+              label="Eircode *"
+              value={form.eirCode ?? ''}
+              onChange={e => set('eirCode', e.target.value)}
+              onBlur={e => set('eirCode', e.target.value.trim().toUpperCase() || null)}
+              fullWidth required size="small"
+              slotProps={{ htmlInput: { maxLength: 10 } }}
+            />
+          </Grid>
+          <Grid size={{ xs: 3 }}>
+            <TextField label="Property Email" value={form.propertyEmail ?? ''} onChange={e => set('propertyEmail', e.target.value)} fullWidth size="small" />
           </Grid>
         </Grid>
 
@@ -133,8 +186,27 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
           <AccordionDetails>
             <Grid container spacing={2}>
               <Grid size={{ xs: 3 }}>
-                <TextField label="Office Keys" type="number" value={form.officeKeysCount ?? 0} onChange={e => set('officeKeysCount', +e.target.value)} fullWidth size="small" slotProps={{ htmlInput: { min: 0 } }} />
+                <TextField
+                  select label="Office Keys"
+                  value={(form.officeKeysCount ?? 0) > 0 ? 'yes' : 'no'}
+                  onChange={e => set('officeKeysCount', e.target.value === 'yes' ? 1 : 0)}
+                  fullWidth size="small"
+                >
+                  <MenuItem value="no">No</MenuItem>
+                  <MenuItem value="yes">Yes</MenuItem>
+                </TextField>
               </Grid>
+              {hasOfficeKeys && (
+                <Grid size={{ xs: 9 }}>
+                  <TextField
+                    label="Office Keys Comment"
+                    value={form.officeKeysComment ?? ''}
+                    onChange={e => set('officeKeysComment', e.target.value)}
+                    fullWidth size="small"
+                    placeholder="e.g. in the office, with maintenance team…"
+                  />
+                </Grid>
+              )}
               <Grid size={{ xs: 3 }}>
                 <TextField label="Resident Keys" type="number" value={form.keysCount ?? 0} onChange={e => set('keysCount', +e.target.value)} fullWidth size="small" slotProps={{ htmlInput: { min: 0 } }} />
               </Grid>
@@ -157,8 +229,8 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
           <AccordionDetails>
             <Grid container spacing={2}>
               {sel('Status', 'electricityStatus', statusOptions)}
+              {supplierField('Supplier', 'electricitySupplier')}
               {tf('MPRN', 'electricityMprn')}
-              {tf('Supplier', 'electricitySupplier')}
               {tf('Account Number', 'electricityAccountNumber')}
               {tf('Keypad Code', 'electricityKeypadCode')}
             </Grid>
@@ -173,8 +245,8 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
           <AccordionDetails>
             <Grid container spacing={2}>
               {sel('Status', 'gasStatus', statusOptions)}
+              {supplierField('Supplier', 'gasSupplier')}
               {tf('GPRN', 'gasGprn')}
-              {tf('Supplier', 'gasSupplier')}
               {tf('Account Number', 'gasAccountNumber')}
               {tf('PIN / Password', 'gasPin')}
             </Grid>
@@ -188,7 +260,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
-              {tf('Supplier', 'wasteSupplier')}
+              {supplierField('Supplier', 'wasteSupplier')}
               {tf('Account Number', 'wasteAccountNumber')}
               {tf('Email', 'wasteEmail')}
               {tf('Mobile', 'wastePhone')}
@@ -241,10 +313,10 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
           </AccordionDetails>
         </Accordion>
 
-        {/* Landlord & Payments */}
+        {/* Payment Details */}
         <Accordion disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>Landlord &amp; Payments</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Payment Details</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
@@ -259,6 +331,8 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
                   {landlords.map(l => <MenuItem key={l.id} value={l.id}>{l.name}</MenuItem>)}
                 </TextField>
               </Grid>
+              {tf('Payment Reference', 'paymentReference', { xs: 6 })}
+              {tf('Property Supplier', 'propertySupplier', { xs: 6 })}
               {(() => {
                 const selected = landlords.find(l => l.id === form.landlordId);
                 if (!selected) return null;
@@ -286,7 +360,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained" disabled={saving || !form.code || !form.bu}>
+        <Button onClick={handleSave} variant="contained" disabled={saving || !canSave}>
           {saving ? 'Saving…' : 'Save'}
         </Button>
       </DialogActions>

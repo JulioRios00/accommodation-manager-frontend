@@ -286,7 +286,7 @@ export default function ResidentDialog({ open, initial, onClose, onSave }: Props
           <Grid size={{ xs: 6 }}>
             <FormControlLabel
               control={<Checkbox checked={form.delinquent} onChange={e => setBool('delinquent', e.target.checked)} size="small" />}
-              label="Delinquent"
+              label="Bad Debtor"
             />
           </Grid>
           <Grid size={{ xs: 6 }}>

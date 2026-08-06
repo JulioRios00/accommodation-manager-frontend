@@ -7,11 +7,22 @@ interface StatsCardProps {
   value: number | string;
   icon: ReactNode;
   color: string;
+  onClick?: () => void;
+  active?: boolean;
 }
 
-export default function StatsCard({ title, value, icon, color }: StatsCardProps) {
+export default function StatsCard({ title, value, icon, color, onClick, active }: StatsCardProps) {
   return (
-    <Card sx={{ flex: 1 }}>
+    <Card
+      sx={{
+        flex: 1,
+        cursor: onClick ? 'pointer' : 'default',
+        outline: active ? `2px solid ${color}` : 'none',
+        transition: 'outline 0.15s, box-shadow 0.15s',
+        '&:hover': onClick ? { boxShadow: 3 } : {},
+      }}
+      onClick={onClick}
+    >
       <CardContent sx={{ p: '10px !important' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box
