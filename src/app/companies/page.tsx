@@ -23,7 +23,8 @@ export default function CompaniesPage() {
   useEffect(() => { load(); }, []);
 
   const columns: GridColDef[] = [
-    { field: 'name', headerName: 'Name', minWidth: 200, flex: 1 },
+    { field: 'bu', headerName: 'BU', width: 80 },
+    { field: 'name', headerName: 'Company Name', minWidth: 200, flex: 1 },
     { field: 'contactEmail', headerName: 'Email', width: 200 },
     { field: 'phone', headerName: 'Phone', width: 130 },
     { field: 'address', headerName: 'Address', minWidth: 200, flex: 1 },
@@ -39,21 +40,29 @@ export default function CompaniesPage() {
   ];
 
   const q = search.toLowerCase();
-  const filtered = items.filter(i => [i.name, i.contactEmail, i.phone].some(v => v?.toLowerCase().includes(q)));
+  const filtered = items.filter(i => [i.bu, i.name, i.contactEmail, i.phone].some(v => v?.toLowerCase().includes(q)));
 
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Companies</Typography>
-        <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
+        <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Business Units</Typography>
+        <TextField size="small" placeholder="Search by BU, name, email…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
         {can('property:write') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
       </Box>
-      <DataGrid rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
-        pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} />
+      <DataGrid
+        rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
+        pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        sx={{
+          border: 'none',
+          '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
+          '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+          '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
+        }}
+      />
       <CompanyDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)}
         onSave={async (data, id) => { if (id) await updateCompany(id, data); else await createCompany(data); await load(); }} />
-      <ConfirmDialog open={!!deleteId} title="Delete Company" message="This action cannot be undone."
+      <ConfirmDialog open={!!deleteId} title="Delete Business Unit" message="This action cannot be undone."
         onConfirm={async () => { await deleteCompany(deleteId!); setDeleteId(null); await load(); }} onCancel={() => setDeleteId(null)} />
     </Box>
   );

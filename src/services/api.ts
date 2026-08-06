@@ -267,6 +267,7 @@ export interface DepositTransaction {
 export interface Company {
   id: string;
   name: string;
+  bu: string | null;
   address: string | null;
   contactEmail: string | null;
   phone: string | null;

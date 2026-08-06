@@ -53,7 +53,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Key Log',           href: '/key-logs',          icon: <VpnKeyIcon />,      roles: null },
   { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon />,    roles: null },
   { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon />,  roles: null },
-  { label: 'Companies',         href: '/companies',         icon: <BusinessIcon />,    roles: null },
+  { label: 'Business Units',    href: '/companies',         icon: <BusinessIcon />,    roles: null },
   { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      roles: null },
   { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   roles: ['sysadmin', 'manager'] },
 ];
