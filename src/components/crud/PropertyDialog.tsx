@@ -78,8 +78,8 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
     }
   };
 
-  // Canonical list of company names for BU dropdown
-  const buOptions = companies.map(c => c.name).filter(Boolean);
+  // BU acronyms from companies — value stored on property must fit VARCHAR(20)
+  const buOptions = companies.filter(c => c.bu).map(c => ({ value: c.bu as string, label: c.name ? `${c.bu} — ${c.name}` : c.bu as string }));
 
   // Supplier options: service provider names
   const supplierOptions = providers.map(p => p.name);
@@ -140,7 +140,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
           <Grid size={{ xs: 3 }}>
             {buOptions.length > 0 ? (
               <TextField select label="BU *" value={form.bu ?? ''} onChange={e => set('bu', e.target.value)} fullWidth required size="small">
-                {buOptions.map(b => <MenuItem key={b} value={b}>{b}</MenuItem>)}
+                {buOptions.map(b => <MenuItem key={b.value} value={b.value}>{b.label}</MenuItem>)}
               </TextField>
             ) : (
               <TextField label="BU *" value={form.bu ?? ''} onChange={e => set('bu', e.target.value)} fullWidth required size="small" helperText="Add companies first to get a dropdown" />
