@@ -10,7 +10,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import { getUsers, updateUserRole, ClerkUser } from '@/services/api';
 import { useRole } from '@/hooks/useRole';
 
-const ROLES = ['sysadmin', 'manager', 'administrator', 'staff'] as const;
+const ROLES = ['sysadmin', 'manager', 'administrator', 'staff', 'maintenance'] as const;
 type Role = typeof ROLES[number];
 
 const ROLE_LABEL: Record<string, string> = {
@@ -18,6 +18,7 @@ const ROLE_LABEL: Record<string, string> = {
   manager: 'Manager',
   administrator: 'Administrator',
   staff: 'Staff',
+  maintenance: 'Maintenance',
   resident: 'Resident',
 };
 
@@ -26,6 +27,7 @@ const ROLE_COLOR: Record<string, string> = {
   manager: '#1565c0',
   administrator: '#2e7d32',
   staff: '#616161',
+  maintenance: '#E65100',
   resident: '#6a1b9a',
 };
 
@@ -38,23 +40,24 @@ interface SectionPerm {
   manager: AccessLevel;
   administrator: AccessLevel;
   staff: AccessLevel;
+  maintenance: AccessLevel;
 }
 
 const PERMISSIONS_MATRIX: SectionPerm[] = [
-  { section: 'Dashboard',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Properties',        sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Beds',              sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Residents',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View+Edit', staff: 'View' },
-  { section: 'Bookings',          sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Landlords',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Service Providers', sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Maintenance',       sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Key Log',           sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Payments',          sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Reports',           sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Companies',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View' },
-  { section: 'Import Data',       sysadmin: 'Full',      manager: 'Full',      administrator: 'None',      staff: 'None' },
-  { section: 'User Management',   sysadmin: 'Full',      manager: 'Full',      administrator: 'None',      staff: 'None' },
+  { section: 'Dashboard',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
+  { section: 'Properties',        sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
+  { section: 'Beds',              sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
+  { section: 'Residents',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View+Edit', staff: 'View',  maintenance: 'View' },
+  { section: 'Bookings',          sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
+  { section: 'Landlords',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'None' },
+  { section: 'Service Providers', sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
+  { section: 'Maintenance',       sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View+Edit' },
+  { section: 'Key Log',           sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
+  { section: 'Payments',          sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'None' },
+  { section: 'Reports',           sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'None' },
+  { section: 'Companies',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'None' },
+  { section: 'Import Data',       sysadmin: 'Full',      manager: 'Full',      administrator: 'None',      staff: 'None',  maintenance: 'None' },
+  { section: 'User Management',   sysadmin: 'Full',      manager: 'Full',      administrator: 'None',      staff: 'None',  maintenance: 'None' },
 ];
 
 function AccessChip({ level }: { level: AccessLevel }) {
@@ -228,10 +231,9 @@ export default function UsersPage() {
               {PERMISSIONS_MATRIX.map(row => (
                 <TableRow key={row.section} sx={{ '&:hover': { bgcolor: '#FDEEDE' } }}>
                   <TableCell sx={{ fontWeight: 500 }}>{row.section}</TableCell>
-                  <TableCell align="center"><AccessChip level={row.sysadmin} /></TableCell>
-                  <TableCell align="center"><AccessChip level={row.manager} /></TableCell>
-                  <TableCell align="center"><AccessChip level={row.administrator} /></TableCell>
-                  <TableCell align="center"><AccessChip level={row.staff} /></TableCell>
+                  {ROLES.map(r => (
+                    <TableCell key={r} align="center"><AccessChip level={row[r]} /></TableCell>
+                  ))}
                 </TableRow>
               ))}
             </TableBody>

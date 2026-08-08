@@ -156,6 +156,8 @@ export interface MaintenanceTicket {
   bedId: string | null;
   residentId: string | null;
   serviceProviderId: string | null;
+  responsibleClerkUserId: string | null;
+  responsibleClerkUserName: string | null;
   title: string;
   descriptionRequested: string | null;
   additionalDetails: string | null;

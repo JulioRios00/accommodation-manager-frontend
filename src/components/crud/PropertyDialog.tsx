@@ -20,7 +20,7 @@ const empty: FormState = {
   wastePaymentType: '', wasteMonthlyAmount: null, wasteStatus: '',
   internetSupplier: '', internetAccountNumber: '', internetEmail: '',
   internetUsername: '', internetPassword: '', internetPaymentType: '',
-  internetStatus: '', internetContractEndDate: '',
+  internetStatus: '', internetContractEndDate: null,
   internetOnlineLink: null, internetBusinessPhone: null, internetNotes: null,
   wastePhone: null,
   salesDescription: '',

@@ -1,4 +1,4 @@
-export type UserRole = 'sysadmin' | 'manager' | 'administrator' | 'staff' | 'resident';
+export type UserRole = 'sysadmin' | 'manager' | 'administrator' | 'staff' | 'resident' | 'maintenance';
 
 export type Action =
   | 'property:write'
@@ -15,6 +15,7 @@ const PERMISSIONS: Record<UserRole, Action[]> = {
   administrator: ['resident:edit'],
   staff:         [],
   resident:      [],
+  maintenance:   [],
 };
 
 export function can(role: string | undefined | null, action: Action): boolean {

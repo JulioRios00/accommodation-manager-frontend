@@ -11,8 +11,8 @@ import LockIcon from '@mui/icons-material/Lock';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import {
-  MaintenanceTicket, Property, Landlord, ServiceProvider, TicketActivityLog,
-  getProperties, getLandlords, getServiceProviders, getTicketActivity, addTicketActivity,
+  MaintenanceTicket, Property, Landlord, ServiceProvider, ClerkUser, TicketActivityLog,
+  getProperties, getLandlords, getServiceProviders, getUsers, getTicketActivity, addTicketActivity,
   claimMaintenanceTicket, closeMaintenanceTicket,
 } from '@/services/api';
 
@@ -22,7 +22,8 @@ const CATEGORIES = ['plumbing', 'electrical', 'internet', 'other'];
 
 const empty: FormState = {
   propertyId: '', category: null, bedId: null, residentId: null,
-  serviceProviderId: null, title: '', descriptionRequested: null, additionalDetails: null,
+  serviceProviderId: null, responsibleClerkUserId: null, responsibleClerkUserName: null,
+  title: '', descriptionRequested: null, additionalDetails: null,
   descriptionDone: null, materials: null, priority: 0, urgency: 'Low', status: 'open',
   timeframe: null, clientName: null, clientPhone: null,
   approvedBy: null, approvalDate: null, paymentApprovedBy: null, chargedBy: null,
@@ -30,6 +31,28 @@ const empty: FormState = {
   entryNoticeDate: null, entryCheckIn: null, entryCheckOut: null, causedByResident: false,
   tags: [], clerkUserId: null, clerkUserName: null,
 };
+
+/** Encode provider/user selection into a single select value */
+function encodeResponsible(form: FormState): string {
+  if (form.serviceProviderId) return `provider:${form.serviceProviderId}`;
+  if (form.responsibleClerkUserId) return `user:${form.responsibleClerkUserId}`;
+  return '';
+}
+
+/** Decode a select value back into the right form fields */
+function decodeResponsible(
+  key: string,
+  providers: ServiceProvider[],
+  users: ClerkUser[],
+): Partial<FormState> {
+  if (!key) return { serviceProviderId: null, responsibleClerkUserId: null, responsibleClerkUserName: null };
+  if (key.startsWith('provider:')) {
+    return { serviceProviderId: key.slice(9), responsibleClerkUserId: null, responsibleClerkUserName: null };
+  }
+  const userId = key.slice(5);
+  const u = users.find(u => u.id === userId);
+  return { serviceProviderId: null, responsibleClerkUserId: userId, responsibleClerkUserName: u?.fullName ?? null };
+}
 
 interface Props {
   open: boolean;
@@ -51,6 +74,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
   const [properties, setProperties] = useState<Property[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
+  const [maintenanceUsers, setMaintenanceUsers] = useState<ClerkUser[]>([]);
 
   // Activity log
   const [logs, setLogs] = useState<TicketActivityLog[]>([]);
@@ -77,6 +101,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
     getProperties().then(setProperties).catch(() => {});
     getLandlords().then(setLandlords).catch(() => {});
     getServiceProviders().then(setProviders).catch(() => {});
+    getUsers().then(all => setMaintenanceUsers(all.filter(u => u.role === 'maintenance'))).catch(() => {});
   }, [open]);
 
   useEffect(() => {
@@ -136,6 +161,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
   const selectedProperty = properties.find(p => p.id === form.propertyId) ?? null;
   const landlord = landlords.find(l => l.id === selectedProperty?.landlordId) ?? null;
   const provider = providers.find(p => p.id === form.serviceProviderId) ?? null;
+  const responsibleUser = maintenanceUsers.find(u => u.id === form.responsibleClerkUserId) ?? null;
 
   const isExisting = !!initial?.id;
   const isOpen = initial?.status === 'open';
@@ -231,9 +257,27 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}>
-            <TextField select label="Service Provider" value={form.serviceProviderId ?? ''} onChange={e => set('serviceProviderId', e.target.value)} fullWidth size="small">
+            <TextField
+              select label="Responsible"
+              value={encodeResponsible(form)}
+              onChange={e => setForm(f => ({ ...f, ...decodeResponsible(e.target.value, providers, maintenanceUsers) }))}
+              fullWidth size="small"
+            >
               <MenuItem value=""><em>None</em></MenuItem>
-              {providers.map(p => <MenuItem key={p.id} value={p.id}>{p.name}{p.specialty ? ` (${p.specialty})` : ''}</MenuItem>)}
+              {maintenanceUsers.length > 0 && (
+                <MenuItem disabled sx={{ opacity: 0.6, fontSize: 12, fontWeight: 600 }}>— Internal Team —</MenuItem>
+              )}
+              {maintenanceUsers.map(u => (
+                <MenuItem key={`user:${u.id}`} value={`user:${u.id}`}>{u.fullName}</MenuItem>
+              ))}
+              {providers.length > 0 && (
+                <MenuItem disabled sx={{ opacity: 0.6, fontSize: 12, fontWeight: 600 }}>— External Providers —</MenuItem>
+              )}
+              {providers.map(p => (
+                <MenuItem key={`provider:${p.id}`} value={`provider:${p.id}`}>
+                  {p.name}{p.specialty ? ` (${p.specialty})` : ''}
+                </MenuItem>
+              ))}
             </TextField>
           </Grid>
           <Grid size={{ xs: 3 }}>
@@ -277,11 +321,25 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
                     </Grid>
                   </>
                 )}
+                {responsibleUser && (
+                  <>
+                    <Grid size={{ xs: 12 }}><Divider /></Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography variant="caption" color="text.secondary">Internal Responsible</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 6 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{responsibleUser.fullName}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 6 }}>
+                      <Typography variant="body2">{responsibleUser.email}</Typography>
+                    </Grid>
+                  </>
+                )}
                 {provider && (
                   <>
                     <Grid size={{ xs: 12 }}><Divider /></Grid>
                     <Grid size={{ xs: 12 }}>
-                      <Typography variant="caption" color="text.secondary">Service Provider</Typography>
+                      <Typography variant="caption" color="text.secondary">External Provider</Typography>
                     </Grid>
                     <Grid size={{ xs: 4 }}>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>{provider.name}</Typography>
