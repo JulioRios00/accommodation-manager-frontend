@@ -143,7 +143,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
                 {buOptions.map(b => <MenuItem key={b} value={b}>{b}</MenuItem>)}
               </TextField>
             ) : (
-              <TextField label="BU *" value={form.bu ?? ''} onChange={e => set('bu', e.target.value)} fullWidth required size="small" helperText="Add companies first to get a dropdown" />
+              <TextField label="BU *" value={form.bu ?? ''} onChange={e => set('bu', e.target.value)} fullWidth required size="small" helperText="Add business units" />
             )}
           </Grid>
           <Grid size={{ xs: 3 }}>
