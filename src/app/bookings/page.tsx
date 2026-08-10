@@ -1,11 +1,13 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Typography, Box, Button, Chip, IconButton, ToggleButton, ToggleButtonGroup, TextField, InputAdornment } from '@mui/material';
+import { useCallback, useEffect, useState } from 'react';
+import { Typography, Box, Button, Chip, IconButton, ToggleButton, ToggleButtonGroup, TextField, InputAdornment, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import RestoreIcon from '@mui/icons-material/Restore';
+import { DataGrid, GridColDef, GridColumnVisibilityModel } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
   getBookings, getBeds, getResidents, getProperties,
@@ -16,9 +18,17 @@ import BookingDialog from '@/components/crud/BookingDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
 
+const COL_VIS_KEY = 'bookings_col_visibility';
+
 function formatDate(d: string | null | undefined) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-GB');
+}
+
+/** Human-readable bed label, e.g. "SD01-4" — falls back to the raw id only if unjoined. */
+function bedLabel(b: Booking) {
+  if (!b.bed) return b.bedId;
+  return [b.bed.propertyCode, b.bed.bedNumber].filter(v => v !== null && v !== undefined).join('-');
 }
 
 const statusColor = (s: string) =>
@@ -26,6 +36,10 @@ const statusColor = (s: string) =>
 
 export default function BookingsPage() {
   const { can } = useRole();
+  const canEdit = can('booking:edit');
+  const canManage = can('booking:write');
+  const canView = can('booking:view');
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
@@ -34,7 +48,25 @@ export default function BookingsPage() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Booking | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Column visibility persistence
+  const [columnVisibility, setColumnVisibility] = useState<GridColumnVisibilityModel>({});
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(COL_VIS_KEY);
+      if (stored) setColumnVisibility(JSON.parse(stored));
+    } catch { }
+  }, []);
+  const handleColumnVisibilityChange = useCallback((model: GridColumnVisibilityModel) => {
+    setColumnVisibility(model);
+    try { localStorage.setItem(COL_VIS_KEY, JSON.stringify(model)); } catch { }
+  }, []);
+  const resetView = () => {
+    setColumnVisibility({});
+    try { localStorage.removeItem(COL_VIS_KEY); } catch { }
+  };
 
   const loadBookings = () => getBookings(filter || undefined).then(setBookings).catch(() => {});
 
@@ -58,18 +90,27 @@ export default function BookingsPage() {
     await loadBookings();
   };
 
+  /** Opens the dialog in edit mode when allowed, otherwise read-only. */
+  const openBooking = (booking: Booking) => {
+    if (!canEdit && !canView) return;
+    setEditing(booking);
+    setReadOnly(!canEdit);
+    setDialogOpen(true);
+  };
+
   const q = search.toLowerCase();
   const visibleBookings = search
     ? bookings.filter(b =>
-        [b.bed ? `${b.bed.property?.code ?? ''}-${b.bed.bedNumber}` : b.bedId,
-         b.resident?.fullName, b.comments, b.status]
+        [bedLabel(b), b.bed?.propertyCode, b.resident?.fullName, b.comments, b.status]
           .some(v => v?.toLowerCase().includes(q))
       )
     : bookings;
 
   const rows = visibleBookings.map((b) => ({
     id: b.id,
-    bedCode: b.bed ? `${b.bed.property?.code ?? ''}-${b.bed.bedNumber}` : b.bedId,
+    propertyCode: b.bed?.propertyCode ?? '—',
+    bedCode: bedLabel(b),
+    bedroomType: b.bed?.bedroomType ?? '—',
     residentName: b.resident?.fullName ?? '—',
     checkInDate: formatDate(b.checkInDate),
     contractEndDate: formatDate(b.contractEndDate),
@@ -82,7 +123,9 @@ export default function BookingsPage() {
   }));
 
   const columns: GridColDef[] = [
+    { field: 'propertyCode', headerName: 'Property Code', width: 125 },
     { field: 'bedCode', headerName: 'Bed', width: 110 },
+    { field: 'bedroomType', headerName: 'Room Type', width: 110 },
     { field: 'residentName', headerName: 'Resident', minWidth: 160, flex: 1 },
     {
       field: 'status',
@@ -104,16 +147,26 @@ export default function BookingsPage() {
       width: 90,
       sortable: false,
       renderCell: (params) => (
-        <Box>
-          {can('booking:write') && (
-            <IconButton size="small" onClick={() => { setEditing((params.row as any)._raw); setDialogOpen(true); }}>
-              <EditIcon fontSize="small" />
-            </IconButton>
+        <Box onClick={e => e.stopPropagation()}>
+          {canEdit ? (
+            <Tooltip title="Edit booking">
+              <IconButton size="small" onClick={() => openBooking((params.row as any)._raw)}>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : canView && (
+            <Tooltip title="View booking">
+              <IconButton size="small" onClick={() => openBooking((params.row as any)._raw)}>
+                <VisibilityIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
-          {can('booking:write') && (
-            <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+          {canManage && (
+            <Tooltip title="Delete booking">
+              <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
         </Box>
       ),
@@ -126,11 +179,11 @@ export default function BookingsPage() {
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Bookings</Typography>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           <TextField
-            placeholder="Search by bed, resident…"
+            placeholder="Search by property, bed, resident…"
             size="small"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            sx={{ width: 240 }}
+            sx={{ width: 260 }}
             slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
           />
           <ToggleButtonGroup value={filter} exclusive onChange={(_, v) => setFilter(v ?? '')} size="small">
@@ -139,8 +192,11 @@ export default function BookingsPage() {
             <ToggleButton value="upcoming">Upcoming</ToggleButton>
             <ToggleButton value="completed">Completed</ToggleButton>
           </ToggleButtonGroup>
-          {can('booking:write') && (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Tooltip title="Reset column visibility to default">
+            <IconButton size="small" onClick={resetView}><RestoreIcon fontSize="small" /></IconButton>
+          </Tooltip>
+          {canManage && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setReadOnly(false); setDialogOpen(true); }}>
               Add Booking
             </Button>
           )}
@@ -155,12 +211,16 @@ export default function BookingsPage() {
             pageSizeOptions={[10, 25]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             disableRowSelectionOnClick
+            columnVisibilityModel={columnVisibility}
+            onColumnVisibilityModelChange={handleColumnVisibilityChange}
+            onRowDoubleClick={params => openBooking((params.row as any)._raw)}
             slots={{ footer: CustomGridFooter }}
             slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
             sx={{
               border: 'none',
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
               '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+              '& .MuiDataGrid-row': { cursor: canView ? 'pointer' : 'default' },
               '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
             }}
           />
@@ -170,6 +230,7 @@ export default function BookingsPage() {
       <BookingDialog
         open={dialogOpen}
         initial={editing}
+        readOnly={readOnly}
         beds={beds}
         residents={residents}
         properties={properties}

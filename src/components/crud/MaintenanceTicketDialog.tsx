@@ -57,6 +57,8 @@ function decodeResponsible(
 interface Props {
   open: boolean;
   initial?: MaintenanceTicket | null;
+  /** Renders every field disabled and hides all write actions. */
+  readOnly?: boolean;
   onClose: () => void;
   onSave: (data: Omit<MaintenanceTicket, 'id' | 'orderNumber' | 'createdAt'>, id?: string) => Promise<void>;
   onRefresh?: () => void;
@@ -66,7 +68,7 @@ const statusColor: Record<string, 'default' | 'warning' | 'info' | 'success' | '
   open: 'warning', in_progress: 'info', completed: 'success', cancelled: 'error',
 };
 
-export default function MaintenanceTicketDialog({ open, initial, onClose, onSave, onRefresh }: Props) {
+export default function MaintenanceTicketDialog({ open, initial, readOnly = false, onClose, onSave, onRefresh }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
 
@@ -169,7 +171,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
 
   const tf = (label: string, field: keyof FormState, xs = 6, type = 'text') => (
     <Grid size={{ xs }}>
-      <TextField label={label} value={(form[field] as string | number) ?? ''} onChange={e => set(field, e.target.value)} fullWidth size="small" type={type} />
+      <TextField label={label} value={(form[field] as string | number) ?? ''} onChange={e => set(field, e.target.value)} fullWidth size="small" type={type} disabled={readOnly} />
     </Grid>
   );
 
@@ -186,7 +188,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
         {actionError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setActionError(null)}>{actionError}</Alert>}
 
         {/* ── Claim / Close actions ── */}
-        {isExisting && (isOpen || isInProgress) && (
+        {!readOnly && isExisting && (isOpen || isInProgress) && (
           <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             {isOpen && (
               <Button
@@ -226,30 +228,30 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
         {/* ── Core fields ── */}
         <Grid container spacing={2} sx={{ mb: 1 }}>
           <Grid size={{ xs: 9 }}>
-            <TextField label="Title" value={form.title} onChange={e => set('title', e.target.value)} fullWidth required size="small" />
+            <TextField label="Title" value={form.title} onChange={e => set('title', e.target.value)} fullWidth required size="small" disabled={readOnly} />
           </Grid>
           <Grid size={{ xs: 3 }}>
-            <TextField select label="Urgency" value={form.urgency} onChange={e => set('urgency', e.target.value)} fullWidth size="small">
+            <TextField select label="Urgency" value={form.urgency} onChange={e => set('urgency', e.target.value)} fullWidth size="small" disabled={readOnly}>
               <MenuItem value="Low">Routine</MenuItem>
               <MenuItem value="Middle">Urgent</MenuItem>
               <MenuItem value="High">Emergency</MenuItem>
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}>
-            <TextField select label="Property" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small">
+            <TextField select label="Property" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small" disabled={readOnly}>
               {properties.map(p => (
                 <MenuItem key={p.id} value={p.id}>{p.code}{p.fullAddress ? ` — ${p.fullAddress}` : ''}</MenuItem>
               ))}
             </TextField>
           </Grid>
           <Grid size={{ xs: 3 }}>
-            <TextField select label="Category" value={form.category ?? ''} onChange={e => set('category', e.target.value)} fullWidth size="small">
+            <TextField select label="Category" value={form.category ?? ''} onChange={e => set('category', e.target.value)} fullWidth size="small" disabled={readOnly}>
               <MenuItem value=""><em>None</em></MenuItem>
               {CATEGORIES.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid size={{ xs: 3 }}>
-            <TextField select label="Status" value={form.status} onChange={e => set('status', e.target.value)} fullWidth size="small">
+            <TextField select label="Status" value={form.status} onChange={e => set('status', e.target.value)} fullWidth size="small" disabled={readOnly}>
               <MenuItem value="open">Open</MenuItem>
               <MenuItem value="in_progress">In Progress</MenuItem>
               <MenuItem value="completed">Completed</MenuItem>
@@ -261,7 +263,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
               select label="Responsible"
               value={encodeResponsible(form)}
               onChange={e => setForm(f => ({ ...f, ...decodeResponsible(e.target.value, providers, maintenanceUsers) }))}
-              fullWidth size="small"
+              fullWidth size="small" disabled={readOnly}
             >
               <MenuItem value=""><em>None</em></MenuItem>
               {maintenanceUsers.length > 0 && (
@@ -281,7 +283,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
             </TextField>
           </Grid>
           <Grid size={{ xs: 3 }}>
-            <TextField select label="Timeframe" value={form.timeframe ?? ''} onChange={e => set('timeframe', e.target.value)} fullWidth size="small">
+            <TextField select label="Timeframe" value={form.timeframe ?? ''} onChange={e => set('timeframe', e.target.value)} fullWidth size="small" disabled={readOnly}>
               {['', 'Same Day', '24h', '48h', '1 Week', '2 Weeks'].map(t => <MenuItem key={t} value={t}>{t || '—'}</MenuItem>)}
             </TextField>
           </Grid>
@@ -361,11 +363,11 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
           <AccordionSummary expandIcon={<ExpandMoreIcon />}><Typography variant="body2" sx={{ fontWeight: 600 }}>Description</Typography></AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12 }}><TextField label="Description Requested" value={form.descriptionRequested ?? ''} onChange={e => set('descriptionRequested', e.target.value)} fullWidth size="small" multiline rows={3} /></Grid>
-              <Grid size={{ xs: 12 }}><TextField label="Additional Details" value={form.additionalDetails ?? ''} onChange={e => set('additionalDetails', e.target.value)} fullWidth size="small" multiline rows={2} /></Grid>
-              <Grid size={{ xs: 12 }}><TextField label="Description Done" value={form.descriptionDone ?? ''} onChange={e => set('descriptionDone', e.target.value)} fullWidth size="small" multiline rows={2} /></Grid>
-              <Grid size={{ xs: 12 }}><TextField label="Materials" value={form.materials ?? ''} onChange={e => set('materials', e.target.value)} fullWidth size="small" multiline rows={2} /></Grid>
-              <Grid size={{ xs: 6 }}><FormControlLabel control={<Checkbox checked={form.causedByResident} onChange={e => set('causedByResident', e.target.checked)} />} label="Caused by resident" /></Grid>
+              <Grid size={{ xs: 12 }}><TextField label="Description Requested" value={form.descriptionRequested ?? ''} onChange={e => set('descriptionRequested', e.target.value)} fullWidth size="small" multiline rows={3} disabled={readOnly} /></Grid>
+              <Grid size={{ xs: 12 }}><TextField label="Additional Details" value={form.additionalDetails ?? ''} onChange={e => set('additionalDetails', e.target.value)} fullWidth size="small" multiline rows={2} disabled={readOnly} /></Grid>
+              <Grid size={{ xs: 12 }}><TextField label="Description Done" value={form.descriptionDone ?? ''} onChange={e => set('descriptionDone', e.target.value)} fullWidth size="small" multiline rows={2} disabled={readOnly} /></Grid>
+              <Grid size={{ xs: 12 }}><TextField label="Materials" value={form.materials ?? ''} onChange={e => set('materials', e.target.value)} fullWidth size="small" multiline rows={2} disabled={readOnly} /></Grid>
+              <Grid size={{ xs: 6 }}><FormControlLabel control={<Checkbox checked={form.causedByResident} onChange={e => set('causedByResident', e.target.checked)} disabled={readOnly} />} label="Caused by resident" /></Grid>
             </Grid>
           </AccordionDetails>
         </Accordion>
@@ -389,8 +391,8 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
             <Grid container spacing={2}>
               {tf('Approved By', 'approvedBy')}
               {tf('Payment Approved By', 'paymentApprovedBy')}
-              <Grid size={{ xs: 6 }}><TextField label="Approval Date" type="date" value={form.approvalDate ?? ''} onChange={e => set('approvalDate', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
-              <Grid size={{ xs: 6 }}><TextField label="Entry Notice Date" type="date" value={form.entryNoticeDate ?? ''} onChange={e => set('entryNoticeDate', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
+              <Grid size={{ xs: 6 }}><TextField label="Approval Date" type="date" value={form.approvalDate ?? ''} onChange={e => set('approvalDate', e.target.value)} fullWidth size="small" disabled={readOnly} slotProps={{ inputLabel: { shrink: true } }} /></Grid>
+              <Grid size={{ xs: 6 }}><TextField label="Entry Notice Date" type="date" value={form.entryNoticeDate ?? ''} onChange={e => set('entryNoticeDate', e.target.value)} fullWidth size="small" disabled={readOnly} slotProps={{ inputLabel: { shrink: true } }} /></Grid>
               {tf('Entry Check-In', 'entryCheckIn')} {tf('Entry Check-Out', 'entryCheckOut')}
             </Grid>
           </AccordionDetails>
@@ -441,6 +443,7 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
               )}
 
               {/* Add note + notify resident */}
+              {!readOnly && <>
               <Divider sx={{ mb: 1 }} />
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                 <TextField
@@ -465,16 +468,19 @@ export default function MaintenanceTicketDialog({ open, initial, onClose, onSave
                   </Button>
                 </Box>
               </Box>
+              </>}
             </AccordionDetails>
           </Accordion>
         )}
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained" disabled={saving || !form.title || !form.propertyId}>
-          {saving ? 'Saving…' : 'Save'}
-        </Button>
+        <Button onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Button>
+        {!readOnly && (
+          <Button onClick={handleSave} variant="contained" disabled={saving || !form.title || !form.propertyId}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

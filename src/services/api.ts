@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { PermissionMatrix } from '@/lib/permissions';
 
 // On Vercel (prod & preview), NEXT_PUBLIC_API_URL is empty → use relative /api
 // so Vercel rewrites proxy to the backend on the same deployment's origin.
@@ -318,8 +319,16 @@ export interface Booking {
   isTemporary: boolean;
   status: 'active' | 'upcoming' | 'completed';
   comments: string | null;
-  resident?: Resident;
-  bed?: { bedNumber: number; bedroomType: string; property?: Property };
+  /** Summaries joined server-side so grids can show readable codes/names. */
+  resident?: { id: string; fullName: string; email: string | null; telephone: string | null } | null;
+  bed?: {
+    id: string;
+    bedNumber: number;
+    name: string | null;
+    bedroomType: string;
+    propertyId: string;
+    propertyCode: string | null;
+  } | null;
 }
 
 export interface Bedroom {
@@ -541,6 +550,14 @@ export interface ClerkUser {
 export const getUsers = () => api.get<ClerkUser[]>('/users').then(r => r.data);
 export const updateUserRole = (clerkId: string, role: string) =>
   api.patch(`/users/${clerkId}`, { role }).then(r => r.data);
+
+// Role permissions matrix — only the overrides are stored; defaults live in lib/permissions.
+export const getRolePermissions = () =>
+  api.get<PermissionMatrix>('/role-permissions').then(r => r.data);
+export const updateRolePermissions = (matrix: PermissionMatrix) =>
+  api.put<PermissionMatrix>('/role-permissions', matrix).then(r => r.data);
+export const resetRolePermissions = () =>
+  api.delete<PermissionMatrix>('/role-permissions').then(r => r.data);
 
 // Reports
 export const getDelinquencyReport = (params?: { propertyId?: string; month?: string }) =>

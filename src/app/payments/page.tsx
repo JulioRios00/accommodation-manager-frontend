@@ -53,8 +53,8 @@ export default function PaymentsPage() {
     { field: 'lateStatus', headerName: 'Status', width: 130, renderCell: (p) => statusChip(p.value as string) },
     { field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => <Box>
-        {can('property:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
-        {can('property:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
+        {can('payment:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
+        {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
       </Box> },
   ];
 
@@ -66,8 +66,8 @@ export default function PaymentsPage() {
     { field: 'status', headerName: 'Status', width: 110, renderCell: (p) => statusChip(p.value as string) },
     { field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => <Box>
-        {can('property:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
-        {can('property:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
+        {can('payment:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
+        {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
       </Box> },
   ];
 
@@ -79,8 +79,8 @@ export default function PaymentsPage() {
     { field: 'dateProcessed', headerName: 'Processed', width: 120 },
     { field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => <Box>
-        {can('property:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
-        {can('property:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
+        {can('payment:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
+        {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
       </Box> },
   ];
 
@@ -104,7 +104,7 @@ export default function PaymentsPage() {
         <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Payments</Typography>
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
-        {can('property:write') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
+        {can('payment:write') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
       </Box>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
         <Tab label="Rent Payments" />

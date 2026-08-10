@@ -37,31 +37,33 @@ import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import appTheme from '@/theme';
 import { useRole } from '@/hooks/useRole';
+import { PermissionsProvider } from '@/lib/PermissionsProvider';
+import type { Section } from '@/lib/permissions';
 
 const DRAWER_WIDTH = 220;
 const SIDEBAR_BG = '#424242';
 
-const ALL_NAV_ITEMS = [
-  { label: 'Dashboard',         href: '/dashboard',         icon: <DashboardIcon />,  roles: null },
-  { label: 'Properties',        href: '/properties',        icon: <ApartmentIcon />,  roles: null },
-  { label: 'Beds',              href: '/beds',              icon: <BedIcon />,         roles: null },
-  { label: 'Residents',         href: '/residents',         icon: <PeopleIcon />,      roles: null },
-  { label: 'Bookings',          href: '/bookings',          icon: <BookOnlineIcon />,  roles: null },
-  { label: 'Landlords',         href: '/landlords',         icon: <PersonIcon />,      roles: null },
-  { label: 'Service Providers', href: '/service-providers', icon: <EngineeringIcon />, roles: null },
-  { label: 'Maintenance',       href: '/maintenance',       icon: <HandymanIcon />,    roles: null },
-  { label: 'Key Log',           href: '/key-logs',          icon: <VpnKeyIcon />,      roles: null },
-  { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon />,    roles: null },
-  { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon />,  roles: null },
-  { label: 'Business Units',    href: '/companies',         icon: <BusinessIcon />,    roles: null },
-  { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      roles: null },
-  { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   roles: ['sysadmin', 'manager'] },
+const ALL_NAV_ITEMS: { label: string; href: string; icon: React.ReactNode; section: Section }[] = [
+  { label: 'Dashboard',         href: '/dashboard',         icon: <DashboardIcon />,   section: 'Dashboard' },
+  { label: 'Properties',        href: '/properties',        icon: <ApartmentIcon />,   section: 'Properties' },
+  { label: 'Beds',              href: '/beds',              icon: <BedIcon />,         section: 'Beds' },
+  { label: 'Residents',         href: '/residents',         icon: <PeopleIcon />,      section: 'Residents' },
+  { label: 'Bookings',          href: '/bookings',          icon: <BookOnlineIcon />,  section: 'Bookings' },
+  { label: 'Landlords',         href: '/landlords',         icon: <PersonIcon />,      section: 'Landlords' },
+  { label: 'Service Providers', href: '/service-providers', icon: <EngineeringIcon />, section: 'Service Providers' },
+  { label: 'Maintenance',       href: '/maintenance',       icon: <HandymanIcon />,    section: 'Maintenance' },
+  { label: 'Key Log',           href: '/key-logs',          icon: <VpnKeyIcon />,      section: 'Key Log' },
+  { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon />,    section: 'Payments' },
+  { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon />,  section: 'Reports' },
+  { label: 'Business Units',    href: '/companies',         icon: <BusinessIcon />,    section: 'Companies' },
+  { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      section: 'Import Data' },
+  { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   section: 'User Management' },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { role } = useRole();
-  const navItems = ALL_NAV_ITEMS.filter(item => !item.roles || item.roles.includes(role));
+  const { level } = useRole();
+  const navItems = ALL_NAV_ITEMS.filter(item => level(item.section) !== 'None');
   return (
     <>
       <Box sx={{ p: 2.5, pb: 1.5 }}>
@@ -203,7 +205,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider theme={appTheme}>
       <CssBaseline />
-      <Shell>{children}</Shell>
+      <PermissionsProvider>
+        <Shell>{children}</Shell>
+      </PermissionsProvider>
     </ThemeProvider>
   );
 }

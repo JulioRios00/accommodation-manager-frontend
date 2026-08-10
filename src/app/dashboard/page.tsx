@@ -318,7 +318,7 @@ export default function DashboardPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Dashboard</Typography>
-        {can('import') && (
+        {can('import:write') && (
           <Button
             variant="outlined" size="small" startIcon={<UploadFileIcon />}
             onClick={() => setImportOpen(v => !v)}

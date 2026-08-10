@@ -10,6 +10,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LockIcon from '@mui/icons-material/Lock';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
@@ -98,6 +99,9 @@ function timeAgo(iso: string): string {
 
 export default function MaintenancePage() {
   const { can } = useRole();
+  const canEdit = can('maintenance:edit');
+  const canManage = can('maintenance:write');
+  const canView = can('maintenance:view');
   const [tab, setTab] = useState(0);
 
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
@@ -110,6 +114,7 @@ export default function MaintenancePage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MaintenanceTicket | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const loadAll = () => getMaintenanceTickets().then(setTickets).catch(() => {});
@@ -160,8 +165,11 @@ export default function MaintenancePage() {
     } catch { } finally { setClaiming(null); }
   };
 
+  /** Opens the ticket in edit mode when allowed, otherwise read-only. */
   const openDetail = (ticket: MaintenanceTicket) => {
+    if (!canEdit && !canView) return;
     setEditing(ticket);
+    setReadOnly(!canEdit);
     setDialogOpen(true);
   };
 
@@ -170,7 +178,7 @@ export default function MaintenancePage() {
     { field: 'title', headerName: 'Title', minWidth: 200, flex: 1 },
     {
       field: 'urgency', headerName: 'Urgency', width: 150,
-      renderCell: (p) => can('property:write') ? (
+      renderCell: (p) => canEdit ? (
         <Select
           value={p.value as string}
           onChange={(e: SelectChangeEvent) => handleUrgencyChange(p.row as MaintenanceTicket, e.target.value)}
@@ -187,7 +195,7 @@ export default function MaintenancePage() {
     },
     {
       field: 'status', headerName: 'Status', width: 160,
-      renderCell: (p) => can('property:write') ? (
+      renderCell: (p) => canEdit ? (
         <Select
           value={p.value as string}
           onChange={(e: SelectChangeEvent) => handleStatusChange(p.row as MaintenanceTicket, e.target.value)}
@@ -233,16 +241,26 @@ export default function MaintenancePage() {
     {
       field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => (
-        <Box>
-          {can('property:write') && (
-            <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}>
-              <EditIcon fontSize="small" />
-            </IconButton>
+        <Box onClick={e => e.stopPropagation()}>
+          {canEdit ? (
+            <Tooltip title="Edit ticket">
+              <IconButton size="small" onClick={() => openDetail(params.row as MaintenanceTicket)}>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : canView && (
+            <Tooltip title="View ticket">
+              <IconButton size="small" onClick={() => openDetail(params.row as MaintenanceTicket)}>
+                <VisibilityIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
-          {can('property:write') && (
-            <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+          {canManage && (
+            <Tooltip title="Delete ticket">
+              <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
         </Box>
       ),
@@ -259,8 +277,8 @@ export default function MaintenancePage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
         <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Maintenance Tickets</Typography>
-        {can('property:write') && tab === 0 && (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
+        {canManage && tab === 0 && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setReadOnly(false); setDialogOpen(true); }}>
             New Ticket
           </Button>
         )}
@@ -296,6 +314,7 @@ export default function MaintenancePage() {
           <DataGrid
             rows={filtered} columns={columns} getRowId={r => r.id}
             autoHeight disableRowSelectionOnClick
+            onRowDoubleClick={params => openDetail(params.row as MaintenanceTicket)}
             pageSizeOptions={[25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
             slots={{ footer: CustomGridFooter }}
@@ -304,6 +323,7 @@ export default function MaintenancePage() {
               border: 'none',
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
               '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+              '& .MuiDataGrid-row': { cursor: canView ? 'pointer' : 'default' },
               '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
             }}
           />
@@ -361,7 +381,7 @@ export default function MaintenancePage() {
                       <Typography variant="caption" color="text.secondary" sx={{ minWidth: 60 }}>
                         {timeAgo(ticket.createdAt)}
                       </Typography>
-                      {can('property:write') && ticket.status === 'open' && (
+                      {canEdit && ticket.status === 'open' && (
                         <Tooltip title="Claim this ticket — locks it to you">
                           <span>
                             <Button
@@ -393,6 +413,7 @@ export default function MaintenancePage() {
       <MaintenanceTicketDialog
         open={dialogOpen}
         initial={editing}
+        readOnly={readOnly}
         onClose={() => setDialogOpen(false)}
         onSave={handleSave}
         onRefresh={refresh}

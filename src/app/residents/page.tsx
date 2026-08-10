@@ -55,7 +55,7 @@ export default function ResidentsPage() {
               <EditIcon fontSize="small" />
             </IconButton>
           )}
-          {can('resident:delete') && (
+          {can('resident:write') && (
             <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
               <DeleteIcon fontSize="small" />
             </IconButton>
@@ -75,7 +75,7 @@ export default function ResidentsPage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Residents</Typography>
-        {can('resident:create') && (
+        {can('resident:write') && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
             Add Resident
           </Button>

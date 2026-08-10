@@ -1,23 +1,34 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Avatar, Box, Chip, MenuItem, Paper, Select, SelectChangeEvent,
+  Avatar, Box, Button, Chip, MenuItem, Paper, Select, SelectChangeEvent,
   Table, TableBody, TableCell, TableHead, TableRow,
   Tooltip, Typography, Alert, CircularProgress,
 } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import BlockIcon from '@mui/icons-material/Block';
-import { getUsers, updateUserRole, ClerkUser } from '@/services/api';
+import RestoreIcon from '@mui/icons-material/Restore';
+import SaveIcon from '@mui/icons-material/Save';
+import {
+  getUsers, updateUserRole, updateRolePermissions, resetRolePermissions, ClerkUser,
+} from '@/services/api';
 import { useRole } from '@/hooks/useRole';
+import { usePermissions } from '@/lib/PermissionsProvider';
+import {
+  ACCESS_LEVELS, AccessLevel, EDITABLE_ROLES, MATRIX_ROLES, PermissionMatrix,
+  SECTIONS, Section, UserRole, resolveMatrix,
+} from '@/lib/permissions';
 
-const ROLES = ['sysadmin', 'manager', 'administrator', 'staff', 'maintenance'] as const;
-type Role = typeof ROLES[number];
+/** Roles assignable from this screen. */
+const ROLES: UserRole[] = ['sysadmin', 'manager', 'administrator', 'staff', 'maintenance'];
 
+// 'staff' is stored as-is; only the label reads "Sales" to distinguish sales staff
+// from the other staff roles (Administrator and Maintenance are staff too).
 const ROLE_LABEL: Record<string, string> = {
   sysadmin: 'SysAdmin',
   manager: 'Manager',
   administrator: 'Administrator',
-  staff: 'Staff',
+  staff: 'Sales',
   maintenance: 'Maintenance',
   resident: 'Resident',
 };
@@ -31,59 +42,39 @@ const ROLE_COLOR: Record<string, string> = {
   resident: '#6a1b9a',
 };
 
-// Permissions matrix: sections × roles
-type AccessLevel = 'Full' | 'View+Edit' | 'View' | 'None';
-
-interface SectionPerm {
-  section: string;
-  sysadmin: AccessLevel;
-  manager: AccessLevel;
-  administrator: AccessLevel;
-  staff: AccessLevel;
-  maintenance: AccessLevel;
-}
-
-const PERMISSIONS_MATRIX: SectionPerm[] = [
-  { section: 'Dashboard',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
-  { section: 'Properties',        sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
-  { section: 'Beds',              sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
-  { section: 'Residents',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View+Edit', staff: 'View',  maintenance: 'View' },
-  { section: 'Bookings',          sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
-  { section: 'Landlords',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'None' },
-  { section: 'Service Providers', sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
-  { section: 'Maintenance',       sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View+Edit' },
-  { section: 'Key Log',           sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'View' },
-  { section: 'Payments',          sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'None' },
-  { section: 'Reports',           sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'None' },
-  { section: 'Companies',         sysadmin: 'Full',      manager: 'Full',      administrator: 'View',      staff: 'View',  maintenance: 'None' },
-  { section: 'Import Data',       sysadmin: 'Full',      manager: 'Full',      administrator: 'None',      staff: 'None',  maintenance: 'None' },
-  { section: 'User Management',   sysadmin: 'Full',      manager: 'Full',      administrator: 'None',      staff: 'None',  maintenance: 'None' },
-];
+const LEVEL_CFG: Record<AccessLevel, { label: string; color: string }> = {
+  'Full':      { label: 'Full Access', color: '#1565c0' },
+  'View+Edit': { label: 'View + Edit', color: '#2e7d32' },
+  'View':      { label: 'View Only',   color: '#616161' },
+  'None':      { label: 'No Access',   color: '#bdbdbd' },
+};
 
 function AccessChip({ level }: { level: AccessLevel }) {
-  const cfg: Record<AccessLevel, { label: string; color: string }> = {
-    'Full':      { label: 'Full Access',  color: '#1565c0' },
-    'View+Edit': { label: 'View + Edit',  color: '#2e7d32' },
-    'View':      { label: 'View Only',    color: '#616161' },
-    'None':      { label: 'No Access',    color: '#bdbdbd' },
-  };
-  const { label, color } = cfg[level];
+  const { label, color } = LEVEL_CFG[level];
   return (
-    <Chip
-      label={label}
-      size="small"
-      sx={{ bgcolor: color, color: 'white', fontWeight: 600, fontSize: 11 }}
-    />
+    <Chip label={label} size="small" sx={{ bgcolor: color, color: 'white', fontWeight: 600, fontSize: 11 }} />
   );
 }
 
+type Draft = Record<UserRole, Record<Section, AccessLevel>>;
+
 export default function UsersPage() {
-  const { role } = useRole();
+  const { role, can } = useRole();
+  const { overrides, setOverrides } = usePermissions();
+
   const [users, setUsers] = useState<ClerkUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Matrix editing — only sysadmin may change it; everyone else sees it read-only.
+  const canEditMatrix = role === 'sysadmin';
+  const resolved = useMemo(() => resolveMatrix(overrides), [overrides]);
+  const [draft, setDraft] = useState<Draft>(resolved);
+  const [savingMatrix, setSavingMatrix] = useState(false);
+
+  useEffect(() => { setDraft(resolved); }, [resolved]);
 
   useEffect(() => {
     getUsers()
@@ -92,7 +83,12 @@ export default function UsersPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (role !== 'sysadmin' && role !== 'manager') {
+  const dirty = useMemo(
+    () => MATRIX_ROLES.some(r => SECTIONS.some(s => draft[r]?.[s] !== resolved[r]?.[s])),
+    [draft, resolved],
+  );
+
+  if (!can('user:view')) {
     return (
       <Box sx={{ p: 4 }}>
         <Alert severity="error">You do not have permission to access User Management.</Alert>
@@ -113,6 +109,44 @@ export default function UsersPage() {
       setError('Failed to update role. Please try again.');
     } finally {
       setSaving(null);
+    }
+  };
+
+  const setCell = (r: UserRole, section: Section, level: AccessLevel) =>
+    setDraft(d => ({ ...d, [r]: { ...d[r], [section]: level } }));
+
+  const handleSaveMatrix = async () => {
+    setSavingMatrix(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      // sysadmin is always Full and is never persisted.
+      const payload: PermissionMatrix = {};
+      for (const r of EDITABLE_ROLES) {
+        payload[r] = Object.fromEntries(SECTIONS.map(s => [s, draft[r][s]])) as Record<Section, AccessLevel>;
+      }
+      setOverrides(await updateRolePermissions(payload));
+      setSuccess('Permissions matrix saved.');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch {
+      setError('Failed to save the permissions matrix. Please try again.');
+    } finally {
+      setSavingMatrix(false);
+    }
+  };
+
+  const handleResetMatrix = async () => {
+    setSavingMatrix(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      setOverrides(await resetRolePermissions());
+      setSuccess('Permissions matrix reset to defaults.');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch {
+      setError('Failed to reset the permissions matrix. Please try again.');
+    } finally {
+      setSavingMatrix(false);
     }
   };
 
@@ -162,10 +196,10 @@ export default function UsersPage() {
                       <Chip label="Resident" size="small" sx={{ bgcolor: ROLE_COLOR.resident, color: 'white', fontWeight: 600 }} />
                     ) : (
                       <Select
-                        value={user.role as Role}
+                        value={user.role as UserRole}
                         onChange={(e: SelectChangeEvent) => handleRoleChange(user.id, e.target.value)}
                         size="small"
-                        disabled={saving === user.id}
+                        disabled={saving === user.id || !can('user:edit')}
                         sx={{
                           fontSize: 13,
                           minWidth: 150,
@@ -209,31 +243,80 @@ export default function UsersPage() {
 
       {/* ── Permissions matrix ────────────────────────────────────────────── */}
       <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
-        <Box sx={{ px: 2.5, py: 1.5, borderBottom: '1px solid #e0e0e0', bgcolor: '#fafafa' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Role Permissions Matrix</Typography>
-          <Typography variant="caption" color="text.secondary">
-            Access levels per section by role. Resident access is restricted to the portal only.
-          </Typography>
+        <Box sx={{
+          px: 2.5, py: 1.5, borderBottom: '1px solid #e0e0e0', bgcolor: '#fafafa',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap',
+        }}>
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Role Permissions Matrix</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {canEditMatrix
+                ? 'Edit access levels per section and role, then save. SysAdmin always keeps full access.'
+                : 'Access levels per section by role. Only a SysAdmin can change these.'}
+              {' '}Resident access is restricted to the portal only.
+            </Typography>
+          </Box>
+          {canEditMatrix && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                size="small" startIcon={<RestoreIcon />} onClick={handleResetMatrix}
+                disabled={savingMatrix}
+              >
+                Reset to defaults
+              </Button>
+              <Button
+                size="small" variant="contained" startIcon={<SaveIcon />}
+                onClick={handleSaveMatrix} disabled={savingMatrix || !dirty}
+              >
+                {savingMatrix ? 'Saving…' : 'Save changes'}
+              </Button>
+            </Box>
+          )}
         </Box>
         <Box sx={{ overflowX: 'auto' }}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: '#FFF0E6' }}>
                 <TableCell sx={{ fontWeight: 700, minWidth: 160 }}>Section</TableCell>
-                {ROLES.map(r => (
-                  <TableCell key={r} align="center" sx={{ fontWeight: 700, color: ROLE_COLOR[r], minWidth: 130 }}>
+                {MATRIX_ROLES.map(r => (
+                  <TableCell key={r} align="center" sx={{ fontWeight: 700, color: ROLE_COLOR[r], minWidth: 150 }}>
                     {ROLE_LABEL[r]}
                   </TableCell>
                 ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              {PERMISSIONS_MATRIX.map(row => (
-                <TableRow key={row.section} sx={{ '&:hover': { bgcolor: '#FDEEDE' } }}>
-                  <TableCell sx={{ fontWeight: 500 }}>{row.section}</TableCell>
-                  {ROLES.map(r => (
-                    <TableCell key={r} align="center"><AccessChip level={row[r]} /></TableCell>
-                  ))}
+              {SECTIONS.map(section => (
+                <TableRow key={section} sx={{ '&:hover': { bgcolor: '#FDEEDE' } }}>
+                  <TableCell sx={{ fontWeight: 500 }}>{section}</TableCell>
+                  {MATRIX_ROLES.map(r => {
+                    const level = draft[r]?.[section] ?? 'None';
+                    // sysadmin is fixed at Full — rendered as a static chip so it can't be locked out.
+                    if (!canEditMatrix || r === 'sysadmin') {
+                      return <TableCell key={r} align="center"><AccessChip level={level} /></TableCell>;
+                    }
+                    return (
+                      <TableCell key={r} align="center">
+                        <Select
+                          value={level}
+                          onChange={(e: SelectChangeEvent) => setCell(r, section, e.target.value as AccessLevel)}
+                          size="small"
+                          variant="outlined"
+                          disabled={savingMatrix}
+                          renderValue={(v) => <AccessChip level={v as AccessLevel} />}
+                          sx={{
+                            fontSize: 13, height: 30, minWidth: 132,
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+                          }}
+                        >
+                          {ACCESS_LEVELS.map(l => (
+                            <MenuItem key={l} value={l}><AccessChip level={l} /></MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))}
             </TableBody>

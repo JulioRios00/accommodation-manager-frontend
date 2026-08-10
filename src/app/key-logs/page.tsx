@@ -36,8 +36,8 @@ export default function KeyLogsPage() {
       field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => (
         <Box>
-          {can('property:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
-          {can('property:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
+          {can('keyLog:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
+          {can('keyLog:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
         </Box>
       ),
     },
@@ -58,7 +58,7 @@ export default function KeyLogsPage() {
         <TextField select size="small" label="Status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} sx={{ width: 120 }}>
           {['', 'out', 'returned'].map(s => <MenuItem key={s} value={s}>{s || 'All'}</MenuItem>)}
         </TextField>
-        {can('property:write') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Log Key</Button>}
+        {can('keyLog:write') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Log Key</Button>}
       </Box>
       <DataGrid rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
         pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
