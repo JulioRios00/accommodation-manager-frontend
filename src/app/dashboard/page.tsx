@@ -250,6 +250,12 @@ export default function DashboardPage() {
   // Selected property for drill-down
   const selectedProperty = selectedPropertyId ? properties.find(p => p.id === selectedPropertyId) : null;
 
+  // When a property is double-clicked, narrow the property table down to just that row too
+  const propertyRowsToShow = useMemo(
+    () => selectedPropertyId ? filteredPropertyRows.filter(r => r.id === selectedPropertyId) : filteredPropertyRows,
+    [filteredPropertyRows, selectedPropertyId],
+  );
+
   const propertyColumns: GridColDef[] = [
     { field: 'code', headerName: 'Code', width: 90, renderCell: p => <Cell><Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>{p.value as string}</Typography></Cell> },
     { field: 'address', headerName: 'Address', minWidth: 200, flex: 1 },
@@ -437,14 +443,25 @@ export default function DashboardPage() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Property Occupancy &amp; Revenue</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" color="text.secondary">{filteredPropertyRows.length} propert{filteredPropertyRows.length !== 1 ? 'ies' : 'y'}</Typography>
+          <Typography variant="body2" color="text.secondary">{propertyRowsToShow.length} propert{propertyRowsToShow.length !== 1 ? 'ies' : 'y'}</Typography>
+          {selectedPropertyId && (
+            <Tooltip title="Clear property selection">
+              <IconButton size="small" onClick={() => setSelectedPropertyId(null)}><ClearIcon fontSize="small" /></IconButton>
+            </Tooltip>
+          )}
           <Tooltip title="Reset column layout"><IconButton size="small" onClick={resetPropView}><RestoreIcon fontSize="small" /></IconButton></Tooltip>
         </Box>
       </Box>
-      <Box sx={{ height: 320, mb: 3 }}>
+      {selectedPropertyId && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          Showing only {selectedProperty?.code ?? ''} — double-click it again to clear, or use ✕ above.
+        </Typography>
+      )}
+      <Box sx={{ mb: 3, bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
         <DataGrid
           key={propGridKey}
-          rows={filteredPropertyRows}
+          autoHeight
+          rows={propertyRowsToShow}
           columns={propertyColumns}
           pageSizeOptions={[10, 25]}
           initialState={{
@@ -487,24 +504,23 @@ export default function DashboardPage() {
           Showing beds for {selectedProperty?.code ?? ''} — double-click a property row again to clear, or use ✕ above.
         </Typography>
       )}
-      <Box sx={{ width: '100%', overflow: 'auto' }}>
-        <Box sx={{ height: 500, minWidth: 900, bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-          <DataGrid
-            rows={bedRows}
-            columns={bedColumns}
-            pageSizeOptions={[25, 50]}
-            initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
-            disableRowSelectionOnClick
-            slots={{ footer: CustomGridFooter }}
-            slotProps={{ footer: { pageSizeOptions: [25, 50] } }}
-            sx={{
-              border: 'none',
-              '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6', fontWeight: 700 },
-              '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
-              '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
-            }}
-          />
-        </Box>
+      <Box sx={{ bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+        <DataGrid
+          autoHeight
+          rows={bedRows}
+          columns={bedColumns}
+          pageSizeOptions={[25, 50]}
+          initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+          disableRowSelectionOnClick
+          slots={{ footer: CustomGridFooter }}
+          slotProps={{ footer: { pageSizeOptions: [25, 50] } }}
+          sx={{
+            border: 'none',
+            '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6', fontWeight: 700 },
+            '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+            '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
+          }}
+        />
       </Box>
     </Box>
   );

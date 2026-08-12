@@ -145,25 +145,23 @@ export default function BedsPage() {
         slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
       />
 
-      <Box sx={{ width: '100%', overflow: 'auto' }}>
-        <Box sx={{ height: 500, minWidth: 800, bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-          <DataGrid
-
-            rows={filtered}
-            columns={columns}
-            pageSizeOptions={[10, 25]}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-            disableRowSelectionOnClick
-            slots={{ footer: CustomGridFooter }}
-            slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
-            sx={{
-              border: 'none',
-              '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
-              '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
-              '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
-            }}
-          />
-        </Box>
+      <Box sx={{ bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+        <DataGrid
+          autoHeight
+          rows={filtered}
+          columns={columns}
+          pageSizeOptions={[10, 25]}
+          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          disableRowSelectionOnClick
+          slots={{ footer: CustomGridFooter }}
+          slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
+          sx={{
+            border: 'none',
+            '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
+            '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+            '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
+          }}
+        />
       </Box>
 
       <BedDialog

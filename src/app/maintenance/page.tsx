@@ -14,7 +14,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
-  getMaintenanceTickets, getMaintenanceQueue,
+  getMaintenanceTickets, getMaintenanceQueue, getProperties,
   createMaintenanceTicket, updateMaintenanceTicket, deleteMaintenanceTicket,
   claimMaintenanceTicket,
   MaintenanceTicket,
@@ -107,6 +107,7 @@ export default function MaintenancePage() {
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [propertyCodeById, setPropertyCodeById] = useState<Record<string, string>>({});
 
   const [queue, setQueue] = useState<MaintenanceTicket[]>([]);
   const [queueLoading, setQueueLoading] = useState(false);
@@ -137,6 +138,11 @@ export default function MaintenancePage() {
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { if (tab === 1) loadQueue(); }, [tab]);
+  useEffect(() => {
+    getProperties()
+      .then(props => setPropertyCodeById(Object.fromEntries(props.map(p => [p.id, p.code]))))
+      .catch(() => {});
+  }, []);
 
   const refresh = () => { loadAll(); if (tab === 1) loadQueue(); };
 
@@ -175,6 +181,11 @@ export default function MaintenancePage() {
 
   const columns: GridColDef[] = [
     { field: 'orderNumber', headerName: 'Order #', width: 100 },
+    {
+      field: '_propertyCode', headerName: 'Property Code', width: 130,
+      sortable: false,
+      valueGetter: (_value, row) => propertyCodeById[(row as MaintenanceTicket).propertyId] ?? '—',
+    },
     { field: 'title', headerName: 'Title', minWidth: 200, flex: 1 },
     {
       field: 'urgency', headerName: 'Urgency', width: 150,
@@ -361,6 +372,11 @@ export default function MaintenancePage() {
                       <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, color: 'text.secondary', minWidth: 70 }}>
                         #{idx + 1} {ticket.orderNumber}
                       </Typography>
+                      <Chip
+                        label={propertyCodeById[ticket.propertyId] ?? '—'}
+                        size="small" variant="outlined"
+                        sx={{ fontFamily: 'monospace', fontWeight: 700 }}
+                      />
                       <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>{ticket.title}</Typography>
                       {ticket.category && (
                         <Chip label={ticket.category} size="small" variant="outlined" sx={{ fontSize: 11 }} />

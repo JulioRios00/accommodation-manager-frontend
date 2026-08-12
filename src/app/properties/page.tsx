@@ -178,29 +178,28 @@ export default function PropertiesPage() {
         </Tooltip>
       </Box>
 
-      <Box sx={{ width: '100%', overflow: 'auto' }}>
-        <Box sx={{ height: 500, minWidth: 650, bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-          <DataGrid
-            rows={filtered}
-            columns={columns}
-            pageSizeOptions={[10, 25]}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-            disableRowSelectionOnClick
+      <Box sx={{ bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+        <DataGrid
+          autoHeight
+          rows={filtered}
+          columns={columns}
+          pageSizeOptions={[10, 25]}
+          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          disableRowSelectionOnClick
 
-            columnVisibilityModel={columnVisibility}
-            onColumnVisibilityModelChange={handleColumnVisibilityChange}
-            onRowDoubleClick={params => router.push(`/properties/${params.row.id}/inventory`)}
-            slots={{ footer: CustomGridFooter }}
-            slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
-            sx={{
-              border: 'none',
-              '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
-              '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
-              '& .MuiDataGrid-row': { cursor: 'pointer' },
-              '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
-            }}
-          />
-        </Box>
+          columnVisibilityModel={columnVisibility}
+          onColumnVisibilityModelChange={handleColumnVisibilityChange}
+          onRowDoubleClick={params => router.push(`/properties/${params.row.id}/inventory`)}
+          slots={{ footer: CustomGridFooter }}
+          slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
+          sx={{
+            border: 'none',
+            '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
+            '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+            '& .MuiDataGrid-row': { cursor: 'pointer' },
+            '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
+          }}
+        />
       </Box>
 
       <PropertyDialog

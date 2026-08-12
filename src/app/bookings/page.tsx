@@ -203,28 +203,27 @@ export default function BookingsPage() {
         </Box>
       </Box>
 
-      <Box sx={{ width: '100%', overflow: 'auto' }}>
-        <Box sx={{ height: 500, minWidth: 820, bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            pageSizeOptions={[10, 25]}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-            disableRowSelectionOnClick
-            columnVisibilityModel={columnVisibility}
-            onColumnVisibilityModelChange={handleColumnVisibilityChange}
-            onRowDoubleClick={params => openBooking((params.row as any)._raw)}
-            slots={{ footer: CustomGridFooter }}
-            slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
-            sx={{
-              border: 'none',
-              '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
-              '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
-              '& .MuiDataGrid-row': { cursor: canView ? 'pointer' : 'default' },
-              '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
-            }}
-          />
-        </Box>
+      <Box sx={{ bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+        <DataGrid
+          autoHeight
+          rows={rows}
+          columns={columns}
+          pageSizeOptions={[10, 25]}
+          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          disableRowSelectionOnClick
+          columnVisibilityModel={columnVisibility}
+          onColumnVisibilityModelChange={handleColumnVisibilityChange}
+          onRowDoubleClick={params => openBooking((params.row as any)._raw)}
+          slots={{ footer: CustomGridFooter }}
+          slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
+          sx={{
+            border: 'none',
+            '& .MuiDataGrid-columnHeaders': { bgcolor: '#FFF0E6' },
+            '& .MuiDataGrid-row:hover': { bgcolor: '#FDEEDE' },
+            '& .MuiDataGrid-row': { cursor: canView ? 'pointer' : 'default' },
+            '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer > button:has(.MuiDataGrid-sortIcon)': { display: 'none' },
+          }}
+        />
       </Box>
 
       <BookingDialog
