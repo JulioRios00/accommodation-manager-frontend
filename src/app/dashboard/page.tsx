@@ -56,7 +56,8 @@ function CellCenter({ children }: { children: React.ReactNode }) {
 }
 
 export default function DashboardPage() {
-  const { can } = useRole();
+  const { can, level } = useRole();
+  const canViewFinancials = level('Dashboard') === 'Full';
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
@@ -173,6 +174,11 @@ export default function DashboardPage() {
           const d = daysUntil(b.activeBooking?.contractEndDate);
           return d !== null && d >= 0 && d <= 38;
         }).length;
+        const upcomingContractEnds = propertyBeds
+          .map(b => b.activeBooking?.contractEndDate)
+          .filter((d): d is string => !!d && new Date(d).getTime() >= Date.now())
+          .sort();
+        const nextContractEnd = upcomingContractEnds[0] ?? null;
         return {
           id: p.id,
           code: p.code,
@@ -185,6 +191,7 @@ export default function DashboardPage() {
           occupancyRate,
           monthly,
           onRadar,
+          nextContractEnd,
         };
       });
   }, [properties, beds, typeFilter, buFilter, areaFilter, availWindow]);
@@ -274,9 +281,13 @@ export default function DashboardPage() {
     },
     { field: 'onRadar', headerName: 'On Radar', width: 90, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as number}</CellCenter> },
     {
+      field: 'nextContractEnd', headerName: 'Contract End', width: 120, align: 'center', headerAlign: 'center',
+      renderCell: p => <CellCenter>{formatDate(p.value as string | null)}</CellCenter>,
+    },
+    ...(canViewFinancials ? [{
       field: 'monthly', headerName: 'Monthly Rev.', width: 130, align: 'center', headerAlign: 'center',
       renderCell: p => <CellCenter><Typography variant="body2" sx={{ fontWeight: 600 }}>{fmt(p.value as number)}</Typography></CellCenter>,
-    },
+    } satisfies GridColDef] : []),
   ];
 
   const bedColumns: GridColDef[] = [
@@ -355,8 +366,12 @@ export default function DashboardPage() {
           active={statusFilter === 'onradar'}
         />
         <StatsCard title="Occupancy"     value={`${stats?.occupancyRate ?? 0}%`} icon={<BarChartIcon />}  color="#6a1b9a" />
-        <StatsCard title="Monthly Rev."  value={fmt(stats?.monthlyRevenue ?? 0)}  icon={<EuroIcon />}     color="#1565c0" />
-        <StatsCard title="Projected Rev." value={fmt(stats?.projectedRevenue ?? 0)} icon={<TrendingUpIcon />} color="#00695c" />
+        {canViewFinancials && (
+          <>
+            <StatsCard title="Monthly Rev."  value={fmt(stats?.monthlyRevenue ?? 0)}  icon={<EuroIcon />}     color="#1565c0" />
+            <StatsCard title="Projected Rev." value={fmt(stats?.projectedRevenue ?? 0)} icon={<TrendingUpIcon />} color="#00695c" />
+          </>
+        )}
       </Box>
 
       {/* Collapsible import */}
@@ -431,17 +446,19 @@ export default function DashboardPage() {
               <Typography variant="caption" color="text.secondary">Occupancy (filtered)</Typography>
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#6a1b9a' }}>{filteredOccupancyRate}%</Typography>
             </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">Monthly Revenue (filtered)</Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#1565c0' }}>{fmt(filteredMonthly)}</Typography>
-            </Box>
+            {canViewFinancials && (
+              <Box>
+                <Typography variant="caption" color="text.secondary">Monthly Revenue (filtered)</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1565c0' }}>{fmt(filteredMonthly)}</Typography>
+              </Box>
+            )}
           </Box>
         )}
       </Paper>
 
-      {/* ── Property Occupancy & Revenue ─────────────────────────────────────── */}
+      {/* ── Property Occupancy ───────────────────────────────────────────────── */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Property Occupancy &amp; Revenue</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Property Occupancy</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="body2" color="text.secondary">{propertyRowsToShow.length} propert{propertyRowsToShow.length !== 1 ? 'ies' : 'y'}</Typography>
           {selectedPropertyId && (
