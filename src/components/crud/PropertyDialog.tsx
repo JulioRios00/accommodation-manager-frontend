@@ -26,7 +26,7 @@ const empty: FormState = {
   salesDescription: '',
   eirCode: null, propertyType: null,
   crn: null, propertyEmail: null,
-  paymentReference: null, propertySupplier: null, paymentNotes: null,
+  paymentReference: null, propertySupplier: null, paymentNotes: null, landlordPaymentDueDay: null,
   landlordId: null,
 };
 
@@ -333,6 +333,15 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
               </Grid>
               {tf('Payment Reference', 'paymentReference', { xs: 6 })}
               {tf('Property Supplier', 'propertySupplier', { xs: 6 })}
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  label="Landlord Payment Due Day" type="number"
+                  value={form.landlordPaymentDueDay ?? ''}
+                  onChange={e => set('landlordPaymentDueDay', e.target.value ? +e.target.value : null)}
+                  fullWidth size="small" slotProps={{ htmlInput: { min: 1, max: 31 } }}
+                  helperText="Day of month the landlord payment auto-generation uses"
+                />
+              </Grid>
               {(() => {
                 const selected = landlords.find(l => l.id === form.landlordId);
                 if (!selected) return null;
