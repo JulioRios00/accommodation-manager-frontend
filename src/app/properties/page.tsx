@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { Typography, Box, Button, IconButton, TextField, InputAdornment, Tooltip } from '@mui/material';
+import { Typography, Box, Button, ButtonGroup, Chip, IconButton, TextField, InputAdornment, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import RestoreIcon from '@mui/icons-material/Restore';
+import UndoIcon from '@mui/icons-material/Undo';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DataGrid, GridColDef, GridColumnVisibilityModel } from '@mui/x-data-grid';
@@ -29,6 +30,7 @@ export default function PropertiesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
 
   // Column visibility persistence
   const [columnVisibility, setColumnVisibility] = useState<GridColumnVisibilityModel>({});
@@ -48,7 +50,7 @@ export default function PropertiesPage() {
   };
 
   const load = () => {
-    getProperties().then(setProperties).catch(() => {});
+    getProperties(true).then(setProperties).catch(() => {});
     getBeds().then(setBeds).catch(() => {});
     getBedrooms().then(setBedrooms).catch(() => {});
     getLandlords().then(setLandlords).catch(() => {});
@@ -68,6 +70,11 @@ export default function PropertiesPage() {
     await load();
   };
 
+  const handleRestore = async (property: Property) => {
+    await updateProperty(property.id, { ...property, active: true });
+    await load();
+  };
+
   const columns: GridColDef[] = [
     {
       field: 'inventory',
@@ -83,6 +90,20 @@ export default function PropertiesPage() {
       ),
     },
     { field: 'code', headerName: 'Code', width: 90 },
+    {
+      field: 'active',
+      headerName: 'Status',
+      width: 90,
+      renderCell: (params) => (
+        <Chip
+          label={params.row.active === false ? 'Inactive' : 'Active'}
+          size="small"
+          sx={params.row.active === false
+            ? { bgcolor: '#9e9e9e', color: 'white', fontWeight: 500 }
+            : { bgcolor: '#2e7d32', color: 'white', fontWeight: 500 }}
+        />
+      ),
+    },
     { field: 'bu', headerName: 'BU', width: 70 },
     { field: 'area', headerName: 'Area', width: 120 },
     { field: 'fullAddress', headerName: 'Address', minWidth: 200, flex: 1 },
@@ -138,7 +159,14 @@ export default function PropertiesPage() {
               <EditIcon fontSize="small" />
             </IconButton>
           )}
-          {can('property:write') && (
+          {can('property:write') && params.row.active === false && (
+            <Tooltip title="Restore property">
+              <IconButton size="small" color="success" onClick={() => handleRestore(params.row as Property)}>
+                <UndoIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {can('property:write') && params.row.active !== false && (
             <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
               <DeleteIcon fontSize="small" />
             </IconButton>
@@ -149,9 +177,15 @@ export default function PropertiesPage() {
   ];
 
   const q = search.toLowerCase();
-  const filtered = properties.filter(p =>
-    [p.code, p.bu, p.area, p.fullAddress].some(v => v?.toLowerCase().includes(q))
-  );
+  const filtered = properties
+    .filter(p => {
+      if (statusFilter === 'active') return p.active !== false;
+      if (statusFilter === 'inactive') return p.active === false;
+      return true;
+    })
+    .filter(p =>
+      [p.code, p.bu, p.area, p.fullAddress].some(v => v?.toLowerCase().includes(q))
+    );
 
   return (
     <Box>
@@ -173,6 +207,17 @@ export default function PropertiesPage() {
           sx={{ width: 340 }}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
         />
+        <ButtonGroup size="small">
+          {(['active', 'inactive', 'all'] as const).map(v => (
+            <Button
+              key={v}
+              variant={statusFilter === v ? 'contained' : 'outlined'}
+              onClick={() => setStatusFilter(v)}
+            >
+              {v === 'active' ? 'Active' : v === 'inactive' ? 'Inactive' : 'All'}
+            </Button>
+          ))}
+        </ButtonGroup>
         <Tooltip title="Reset column visibility to default">
           <IconButton size="small" onClick={resetView}><RestoreIcon fontSize="small" /></IconButton>
         </Tooltip>

@@ -120,6 +120,7 @@ export interface Property {
   paymentNotes: string | null;
   officeKeysComment: string | null;
   landlordId: string | null;
+  active?: boolean;
 }
 
 export interface Landlord {
@@ -358,7 +359,8 @@ export interface Bed {
 
 // --- Read ---
 export const getDashboardStats = () => api.get<DashboardStats>('/dashboard/stats').then(r => r.data);
-export const getProperties = () => api.get<Property[]>('/properties').then(r => r.data);
+export const getProperties = (includeInactive = false) =>
+  api.get<Property[]>('/properties', { params: includeInactive ? { includeInactive: 'true' } : undefined }).then(r => r.data);
 export const getBeds = (propertyId?: string) =>
   api.get<Bed[]>('/beds', { params: propertyId ? { propertyId } : {} }).then(r => r.data);
 export const getResidents = () => api.get<Resident[]>('/residents').then(r => r.data);
