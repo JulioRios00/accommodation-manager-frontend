@@ -254,10 +254,17 @@ export default function DashboardPage() {
   }, [beds, residentMap, allowedPropertyIds, selectedPropertyId, typeFilter, buFilter, areaFilter, availWindow, statusFilter]);
 
   // ── Filtered totals ──────────────────────────────────────────────────────
-  const filteredMonthly = useMemo(() => filteredPropertyRows.reduce((s, r) => s + r.monthly, 0), [filteredPropertyRows]);
-  const filteredOccupied = useMemo(() => filteredPropertyRows.reduce((s, r) => s + r.occupied, 0), [filteredPropertyRows]);
-  const filteredTotal = useMemo(() => filteredPropertyRows.reduce((s, r) => s + r.total, 0), [filteredPropertyRows]);
+  // Derived from bedRows (already filtered per-bed, including statusFilter) rather than
+  // from filteredPropertyRows' per-property totals — summing a matching property's FULL
+  // bed count double-counts beds in properties that have a mix of occupied/empty/on-radar
+  // beds, since such a property can satisfy more than one status filter at once.
+  const filteredOccupied = useMemo(() => bedRows.filter(b => b.status === 'Occupied').length, [bedRows]);
+  const filteredTotal = bedRows.length;
   const filteredOccupancyRate = filteredTotal > 0 ? Math.round((filteredOccupied / filteredTotal) * 100) : 0;
+  const filteredMonthly = useMemo(
+    () => bedRows.filter(b => b.status === 'Occupied').reduce((s, b) => s + (b.rentAmount ?? 0), 0),
+    [bedRows],
+  );
   const filtersActive = !!(typeFilter || buFilter || areaFilter || availWindow || statusFilter);
 
   // Selected property for drill-down
