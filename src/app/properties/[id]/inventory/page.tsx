@@ -18,12 +18,14 @@ import {
   createBed, updateBed, deleteBed,
   getPropertySpaces, createPropertySpace, updatePropertySpace, deletePropertySpace,
   createSpaceItem, updateSpaceItem, deleteSpaceItem,
+  updateResident, createResident,
   Bed, Bedroom, Property, PropertySpace, SpaceItem, Resident, SPACE_CATEGORY_LABELS,
 } from '@/services/api';
 import BedroomDialog from '@/components/crud/BedroomDialog';
 import BedDialog from '@/components/crud/BedDialog';
 import PropertySpaceDialog from '@/components/crud/PropertySpaceDialog';
 import SpaceItemDialog from '@/components/crud/SpaceItemDialog';
+import ResidentDialog from '@/components/crud/ResidentDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
 
@@ -88,6 +90,10 @@ export default function InventoryPage() {
   const [editingItem, setEditingItem] = useState<SpaceItem | null>(null);
   const [activeSpaceId, setActiveSpaceId] = useState<string>('');
   const [deleteItemInfo, setDeleteItemInfo] = useState<{ spaceId: string; itemId: string } | null>(null);
+
+  // Resident dialog state (opened via double-click on a bed's resident)
+  const [residentDialogOpen, setResidentDialogOpen] = useState(false);
+  const [editingResident, setEditingResident] = useState<Resident | null>(null);
 
   const load = async () => {
     const [props, brs, bds, sps, rs] = await Promise.all([
@@ -202,15 +208,25 @@ export default function InventoryPage() {
             </TableCell>
           </TableRow>
         ) : rows.map(bed => {
-          const residentName = bed.activeBooking?.residentId
-            ? (residentMap.get(bed.activeBooking.residentId)?.fullName ?? '—')
-            : '—';
+          const resident = bed.activeBooking?.residentId ? residentMap.get(bed.activeBooking.residentId) : null;
+          const residentName = resident?.fullName ?? '—';
           return (
             <TableRow key={bed.id} hover>
               <TableCell sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
                 {bed.propertyCode ?? ''}-{bed.bedNumber}
               </TableCell>
-              <TableCell sx={{ fontWeight: residentName !== '—' ? 500 : 400, color: residentName === '—' ? 'text.secondary' : 'inherit' }}>
+              <TableCell
+                onDoubleClick={() => {
+                  if (!resident) return;
+                  setEditingResident(resident);
+                  setResidentDialogOpen(true);
+                }}
+                sx={{
+                  fontWeight: residentName !== '—' ? 500 : 400,
+                  color: residentName === '—' ? 'text.secondary' : 'inherit',
+                  cursor: resident ? 'pointer' : 'default',
+                }}
+              >
                 {residentName}
               </TableCell>
               <TableCell>{bed.name ?? '—'}</TableCell>
@@ -464,6 +480,16 @@ export default function InventoryPage() {
       <SpaceItemDialog
         open={itemDialogOpen} initial={editingItem} spaceId={activeSpaceId}
         onClose={() => setItemDialogOpen(false)} onSave={handleSaveItem}
+      />
+      <ResidentDialog
+        open={residentDialogOpen}
+        initial={editingResident}
+        onClose={() => setResidentDialogOpen(false)}
+        onSave={async (data, id) => {
+          const saved = id ? await updateResident(id, data) : await createResident(data);
+          await load();
+          return saved.id;
+        }}
       />
       <ConfirmDialog
         open={!!deleteBedroomId}

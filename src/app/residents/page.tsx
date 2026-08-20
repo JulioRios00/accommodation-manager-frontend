@@ -7,7 +7,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
-import { getResidents, createResident, updateResident, deleteResident, Resident } from '@/services/api';
+import { getResidents, createResident, updateResident, deleteResident, getBeds, getBookings, Resident } from '@/services/api';
 import ResidentDialog from '@/components/crud/ResidentDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -19,13 +19,24 @@ export default function ResidentsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Resident | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [bedCodeByResident, setBedCodeByResident] = useState<Map<string, string>>(new Map());
 
   const load = () => getResidents().then(setResidents).catch(() => {});
-  useEffect(() => { load(); }, []);
+  const loadBedCodes = () => Promise.all([getBeds(), getBookings('active')]).then(([beds, bookings]) => {
+    const bedById = new Map(beds.map(b => [b.id, b]));
+    const map = new Map<string, string>();
+    for (const booking of bookings) {
+      const bed = bedById.get(booking.bedId);
+      if (bed) map.set(booking.residentId, `${bed.propertyCode ?? '?'}-${bed.bedNumber}`);
+    }
+    setBedCodeByResident(map);
+  }).catch(() => {});
+  useEffect(() => { load(); loadBedCodes(); }, []);
 
   const handleSave = async (data: Omit<Resident, 'id'>, id?: string): Promise<string> => {
     const saved = id ? await updateResident(id, data) : await createResident(data);
     await load();
+    await loadBedCodes();
     return saved.id;
   };
 
@@ -40,6 +51,10 @@ export default function ResidentsPage() {
     { field: 'fullName', headerName: 'Name', minWidth: 160, flex: 1 },
     { field: 'email', headerName: 'Email', minWidth: 160, flex: 1 },
     { field: 'telephone', headerName: 'Telephone', width: 140 },
+    {
+      field: 'bedCode', headerName: 'Bed Code', width: 110,
+      valueGetter: (_v, row) => bedCodeByResident.get((row as Resident).id) ?? '',
+    },
     { field: 'nationality', headerName: 'Nationality', width: 130 },
     { field: 'personalId', headerName: 'Personal ID', width: 130 },
     { field: 'source', headerName: 'Source', width: 120 },

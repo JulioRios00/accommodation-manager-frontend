@@ -19,8 +19,9 @@ import ClearIcon from '@mui/icons-material/Clear';
 import StatsCard from '@/components/dashboard/StatsCard';
 import XlsxUploader from '@/components/upload/XlsxUploader';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
-import { getDashboardStats, getProperties, getBeds, getResidents, getCompanies, DashboardStats, Bed, Property, Resident } from '@/services/api';
+import { getDashboardStats, getProperties, getBeds, getResidents, getCompanies, updateResident, createResident, DashboardStats, Bed, Property, Resident } from '@/services/api';
 import { useRole } from '@/hooks/useRole';
+import ResidentDialog from '@/components/crud/ResidentDialog';
 
 const PROPERTY_TYPES = ['House', 'Apartment', 'Duplex', 'Studio Block', 'Other'];
 const AVAILABILITY_WINDOWS = [
@@ -119,7 +120,9 @@ export default function DashboardPage() {
     } catch { }
   };
 
-  const residentMap = useMemo(() => new Map(residents.map(r => [r.id, r.fullName])), [residents]);
+  const residentMap = useMemo(() => new Map(residents.map(r => [r.id, r])), [residents]);
+  const [residentDialogOpen, setResidentDialogOpen] = useState(false);
+  const [editingResident, setEditingResident] = useState<Resident | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -240,7 +243,10 @@ export default function DashboardPage() {
         rentAmount: bed.rentAmount,
         depositAmount: bed.depositAmount,
         status: bed.status === 'allocated' ? 'Occupied' : 'Empty',
-        residentName: bed.activeBooking?.residentId ? (residentMap.get(bed.activeBooking.residentId) ?? '—') : '—',
+        residentId: bed.activeBooking?.residentId ?? null,
+        residentName: bed.activeBooking?.residentId ? (residentMap.get(bed.activeBooking.residentId)?.fullName ?? '—') : '—',
+        residentTelephone: bed.activeBooking?.residentId ? (residentMap.get(bed.activeBooking.residentId)?.telephone ?? '—') : '—',
+        residentEmail: bed.activeBooking?.residentId ? (residentMap.get(bed.activeBooking.residentId)?.email ?? '—') : '—',
         checkIn: formatDate(bed.activeBooking?.checkInDate),
         contractEnd: formatDate(bed.activeBooking?.contractEndDate),
         daysLeft: daysUntil(bed.activeBooking?.contractEndDate),
@@ -311,6 +317,8 @@ export default function DashboardPage() {
       ),
     },
     { field: 'residentName', headerName: 'Resident', minWidth: 160, flex: 1 },
+    { field: 'residentTelephone', headerName: 'Telephone', width: 130 },
+    { field: 'residentEmail', headerName: 'Email', minWidth: 160, flex: 1 },
     { field: 'bedroomType', headerName: 'Room Type', width: 130, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as string}</CellCenter> },
     { field: 'sex', headerName: 'Gender', width: 80, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as string}</CellCenter> },
     { field: 'bedSize', headerName: 'Bed Size', width: 90, align: 'center', headerAlign: 'center', renderCell: p => <CellCenter>{p.value as string}</CellCenter> },
@@ -529,6 +537,14 @@ export default function DashboardPage() {
           pageSizeOptions={[25, 50]}
           initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
           disableRowSelectionOnClick
+          onRowDoubleClick={params => {
+            const residentId = params.row.residentId as string | null;
+            if (!residentId) return;
+            const resident = residentMap.get(residentId);
+            if (!resident) return;
+            setEditingResident(resident);
+            setResidentDialogOpen(true);
+          }}
           slots={{ footer: CustomGridFooter }}
           slotProps={{ footer: { pageSizeOptions: [25, 50] } }}
           sx={{
@@ -539,6 +555,17 @@ export default function DashboardPage() {
           }}
         />
       </Box>
+
+      <ResidentDialog
+        open={residentDialogOpen}
+        initial={editingResident}
+        onClose={() => setResidentDialogOpen(false)}
+        onSave={async (data, id) => {
+          const saved = id ? await updateResident(id, data) : await createResident(data);
+          await loadData();
+          return saved.id;
+        }}
+      />
     </Box>
   );
 }
