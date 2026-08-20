@@ -8,7 +8,7 @@ type FormState = Omit<Landlord, 'id' | 'active'>;
 
 const empty: FormState = {
   name: '', email: '', address: '', bankName: '', sortCode: '', accountNumber: '',
-  iban: '', bic: '', paymentReference: '', paymentMethod: '', payoutDay: null, residentPaymentDueDay: null,
+  iban: '', bic: '', paymentReference: '', paymentMethod: '', residentPaymentDueDay: null,
 };
 
 interface Props {
@@ -75,9 +75,6 @@ export default function LandlordDialog({ open, initial, onClose, onSave }: Props
                 <TextField select label="Payment Method" value={form.paymentMethod ?? ''} onChange={e => set('paymentMethod', e.target.value)} fullWidth size="small">
                   {['', 'BankTransfer', 'StandingOrder'].map(v => <MenuItem key={v} value={v}>{v || '—'}</MenuItem>)}
                 </TextField>
-              </Grid>
-              <Grid size={{ xs: 3 }}>
-                <TextField label="Payout Day" type="number" value={form.payoutDay ?? ''} onChange={e => set('payoutDay', e.target.value ? +e.target.value : null)} fullWidth size="small" slotProps={{ htmlInput: { min: 1, max: 31 } }} />
               </Grid>
               <Grid size={{ xs: 3 }}>
                 <TextField label="Resident Due Day" type="number" value={form.residentPaymentDueDay ?? ''} onChange={e => set('residentPaymentDueDay', e.target.value ? +e.target.value : null)} fullWidth size="small" slotProps={{ htmlInput: { min: 1, max: 31 } }} />

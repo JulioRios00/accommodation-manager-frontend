@@ -117,6 +117,7 @@ export interface Property {
   propertyEmail: string | null;
   paymentReference: string | null;
   propertySupplier: string | null;
+  paymentNotes: string | null;
   officeKeysComment: string | null;
   landlordId: string | null;
 }
@@ -133,7 +134,6 @@ export interface Landlord {
   bic: string | null;
   paymentReference: string | null;
   paymentMethod: string | null;
-  payoutDay: number | null;
   residentPaymentDueDay: number | null;
   active: boolean;
 }

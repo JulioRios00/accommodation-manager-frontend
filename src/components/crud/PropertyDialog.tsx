@@ -26,7 +26,7 @@ const empty: FormState = {
   salesDescription: '',
   eirCode: null, propertyType: null,
   crn: null, propertyEmail: null,
-  paymentReference: null, propertySupplier: null,
+  paymentReference: null, propertySupplier: null, paymentNotes: null,
   landlordId: null,
 };
 
@@ -322,7 +322,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 }}>
                 <TextField
-                  select label="Landlord"
+                  select label="Landlord/Payee Name"
                   value={form.landlordId ?? ''}
                   onChange={e => set('landlordId', e.target.value || null)}
                   fullWidth size="small"
@@ -345,14 +345,19 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
                       <TextField label="BIC" value={selected.bic ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
                     </Grid>
                     <Grid size={{ xs: 6 }}>
-                      <TextField label="Payout Day" value={selected.payoutDay ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
-                    </Grid>
-                    <Grid size={{ xs: 6 }}>
                       <TextField label="Resident Due Day" value={selected.residentPaymentDueDay ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
                     </Grid>
                   </>
                 );
               })()}
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  label="Notes"
+                  value={form.paymentNotes ?? ''}
+                  onChange={e => set('paymentNotes', e.target.value)}
+                  fullWidth size="small" multiline rows={3}
+                />
+              </Grid>
             </Grid>
           </AccordionDetails>
         </Accordion>

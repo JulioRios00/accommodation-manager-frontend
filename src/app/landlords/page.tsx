@@ -42,7 +42,6 @@ export default function LandlordsPage() {
     { field: 'bankName', headerName: 'Bank', width: 140 },
     { field: 'iban', headerName: 'IBAN', width: 200 },
     { field: 'paymentMethod', headerName: 'Pay Method', width: 130 },
-    { field: 'payoutDay', headerName: 'Payout Day', width: 100, type: 'number' },
     {
       field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => (
