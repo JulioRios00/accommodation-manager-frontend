@@ -24,6 +24,8 @@ export default function LandlordPaymentDialog({ open, initial, onClose, onSave }
   const set = (f: keyof FormState, v: unknown) => setForm(prev => ({ ...prev, [f]: v === '' ? null : v }));
   const handleSave = async () => { setSaving(true); try { await onSave(form, initial?.id); onClose(); } finally { setSaving(false); } };
 
+  const selectedProperty = properties.find(p => p.id === form.propertyId);
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial ? 'Edit Landlord Payment' : 'New Landlord Payment'}</DialogTitle>
@@ -44,6 +46,12 @@ export default function LandlordPaymentDialog({ open, initial, onClose, onSave }
           <Grid size={{ xs: 3 }}><TextField label="Amount Paid (€)" type="number" value={form.amountPaid} onChange={e => set('amountPaid', +e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 6 }}><TextField label="Beneficiary" value={form.beneficiaryName ?? ''} onChange={e => set('beneficiaryName', e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 6 }}><TextField label="IBAN" value={form.iban ?? ''} onChange={e => set('iban', e.target.value)} fullWidth size="small" /></Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField
+              label="Payment Reference (from Property)" value={selectedProperty?.paymentReference ?? '—'}
+              fullWidth size="small" slotProps={{ input: { readOnly: true } }}
+            />
+          </Grid>
           <Grid size={{ xs: 4 }}><TextField label="Date Due" type="date" value={form.dateDue ?? ''} onChange={e => set('dateDue', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
           <Grid size={{ xs: 4 }}><TextField label="Date Paid" type="date" value={form.datePaid ?? ''} onChange={e => set('datePaid', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
           <Grid size={{ xs: 4 }}>

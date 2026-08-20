@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField } from '@mui/material';
-import { DepositTransaction, Property, Resident, getProperties, getResidents } from '@/services/api';
+import { DepositTransaction, Property, Resident, Bed, getProperties, getResidents, getBeds } from '@/services/api';
 
 type FormState = Omit<DepositTransaction, 'id'>;
 const empty: FormState = { type: 'receipt', residentId: '', bookingId: null, propertyId: '', bedId: null, residentName: '', checkoutDate: null, depositAmount: 0, proRataRentAmount: null, iban: null, payeeAddress: null, status: 'pending', dateProcessed: null, bankReference: null, company: null, comments: null };
@@ -13,13 +13,17 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
   const [saving, setSaving] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [beds, setBeds] = useState<Bed[]>([]);
 
   useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
   useEffect(() => {
     if (!open) return;
     getProperties().then(setProperties).catch(() => {});
     getResidents().then(setResidents).catch(() => {});
+    getBeds().then(setBeds).catch(() => {});
   }, [open]);
+
+  const propertyBeds = useMemo(() => beds.filter(b => b.propertyId === form.propertyId), [beds, form.propertyId]);
 
   const set = (f: keyof FormState, v: unknown) => setForm(prev => ({ ...prev, [f]: v === '' ? null : v }));
 
@@ -46,8 +50,20 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}>
-            <TextField select label="Property" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small">
+            <TextField
+              select label="Property" value={form.propertyId}
+              onChange={e => setForm(prev => ({ ...prev, propertyId: e.target.value, bedId: null }))}
+              fullWidth required size="small"
+            >
               {properties.map(p => <MenuItem key={p.id} value={p.id}>{p.code}{p.fullAddress ? ` — ${p.fullAddress}` : ''}</MenuItem>)}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <TextField
+              select label="Bed Code" value={form.bedId ?? ''} onChange={e => set('bedId', e.target.value)}
+              fullWidth size="small" disabled={!form.propertyId}
+            >
+              {propertyBeds.map(b => <MenuItem key={b.id} value={b.id}>{b.propertyCode ?? ''}-{b.bedNumber}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}><TextField label="Resident Name" value={form.residentName} onChange={e => set('residentName', e.target.value)} fullWidth required size="small" /></Grid>

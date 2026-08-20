@@ -226,6 +226,7 @@ export interface RentPayment {
   rentAmount: number;
   amountPaid: number;
   lateStatus: string;
+  paymentStatus: string;
   datePaid: string | null;
   notes: string | null;
 }

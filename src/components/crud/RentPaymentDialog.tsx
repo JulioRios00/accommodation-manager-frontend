@@ -4,7 +4,7 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuIt
 import { RentPayment, Property, Resident, Booking, Bed, getProperties, getResidents, getBookings, getBeds } from '@/services/api';
 
 type FormState = Omit<RentPayment, 'id'>;
-const empty: FormState = { residentId: '', bookingId: '', propertyId: '', month: '', paymentDueDay: null, rentAmount: 0, amountPaid: 0, lateStatus: 'on_time', datePaid: null, notes: null };
+const empty: FormState = { residentId: '', bookingId: '', propertyId: '', month: '', paymentDueDay: null, rentAmount: 0, amountPaid: 0, lateStatus: 'on_time', paymentStatus: 'unpaid', datePaid: null, notes: null };
 
 interface Props { open: boolean; initial?: RentPayment | null; onClose: () => void; onSave: (data: FormState, id?: string) => Promise<void>; }
 
@@ -117,6 +117,11 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
           <Grid size={{ xs: 4 }}>
             <TextField select label="Late Status" value={form.lateStatus} onChange={e => set('lateStatus', e.target.value)} fullWidth size="small">
               {['on_time', 'demand_d1', 'final_demand_d4', 'overdue'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 4 }}>
+            <TextField select label="Payment Status" value={form.paymentStatus} onChange={e => set('paymentStatus', e.target.value)} fullWidth size="small">
+              {['unpaid', 'paid'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid size={{ xs: 4 }}><TextField label="Date Paid" type="date" value={form.datePaid ?? ''} onChange={e => set('datePaid', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
