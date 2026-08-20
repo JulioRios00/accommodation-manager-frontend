@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Button, Chip, IconButton, MenuItem, Paper, TextField,
+  Box, Button, Chip, Divider, IconButton, MenuItem, Paper, TextField,
   Tooltip, Typography,
 } from '@mui/material';
 import { DataGrid, GridColDef, GridColumnVisibilityModel, GridColumnResizeParams } from '@mui/x-data-grid';
@@ -361,30 +361,56 @@ export default function DashboardPage() {
         )}
       </Box>
 
-      {/* ── Global KPI cards ─────────────────────────────────────────────────── */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)', md: 'repeat(8, 1fr)' }, gap: 1.5, mb: 3 }}>
-        <StatsCard title="Properties"    value={stats?.totalProperties ?? 0}  icon={<ApartmentIcon />}   color="#114C5A" />
-        <StatsCard title="Total Beds"    value={stats?.totalBeds ?? 0}         icon={<BedIcon />}         color="#114C5A" />
-        <StatsCard
-          title="Occupied" value={stats?.occupiedBeds ?? 0} icon={<CheckCircleIcon />} color="#2e7d32"
-          onClick={() => setStatusFilter(s => s === 'occupied' ? '' : 'occupied')}
-          active={statusFilter === 'occupied'}
-        />
-        <StatsCard
-          title="Empty" value={stats?.availableBeds ?? 0} icon={<DoNotDisturbIcon />} color="#d32f2f"
-          onClick={() => setStatusFilter(s => s === 'available' ? '' : 'available')}
-          active={statusFilter === 'available'}
-        />
-        <StatsCard
-          title="On Radar" value={stats?.onRadarBeds ?? 0} icon={<RadarIcon />} color="#ef6c00"
-          onClick={() => setStatusFilter(s => s === 'onradar' ? '' : 'onradar')}
-          active={statusFilter === 'onradar'}
-        />
-        <StatsCard title="Occupancy"     value={`${stats?.occupancyRate ?? 0}%`} icon={<BarChartIcon />}  color="#6a1b9a" />
+      {/* ── Global KPI cards, grouped into Properties / Beds / Monthly Revenue ── */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 2, mb: 3 }}>
+        <Box sx={{ flex: '1 1 220px' }}>
+          <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700, lineHeight: 1.5 }}>
+            Properties
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
+            <StatsCard title="Properties" value={stats?.totalProperties ?? 0} icon={<ApartmentIcon />} color="#114C5A" />
+            <StatsCard title="Occupancy" value={`${stats?.occupancyRate ?? 0}%`} icon={<BarChartIcon />} color="#6a1b9a" />
+          </Box>
+        </Box>
+
+        <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+
+        <Box sx={{ flex: '2 1 440px' }}>
+          <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700, lineHeight: 1.5 }}>
+            Beds
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 1.5 }}>
+            <StatsCard title="Total Beds" value={stats?.totalBeds ?? 0} icon={<BedIcon />} color="#114C5A" />
+            <StatsCard
+              title="Occupied" value={stats?.occupiedBeds ?? 0} icon={<CheckCircleIcon />} color="#2e7d32"
+              onClick={() => setStatusFilter(s => s === 'occupied' ? '' : 'occupied')}
+              active={statusFilter === 'occupied'}
+            />
+            <StatsCard
+              title="Empty" value={stats?.availableBeds ?? 0} icon={<DoNotDisturbIcon />} color="#d32f2f"
+              onClick={() => setStatusFilter(s => s === 'available' ? '' : 'available')}
+              active={statusFilter === 'available'}
+            />
+            <StatsCard
+              title="On Radar" value={stats?.onRadarBeds ?? 0} icon={<RadarIcon />} color="#ef6c00"
+              onClick={() => setStatusFilter(s => s === 'onradar' ? '' : 'onradar')}
+              active={statusFilter === 'onradar'}
+            />
+          </Box>
+        </Box>
+
         {canViewFinancials && (
           <>
-            <StatsCard title="Monthly Rev."  value={fmt(stats?.monthlyRevenue ?? 0)}  icon={<EuroIcon />}     color="#1565c0" />
-            <StatsCard title="Projected Rev." value={fmt(stats?.projectedRevenue ?? 0)} icon={<TrendingUpIcon />} color="#00695c" />
+            <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+            <Box sx={{ flex: '1 1 220px' }}>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700, lineHeight: 1.5 }}>
+                Monthly Revenue
+              </Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
+                <StatsCard title="Actual" value={fmt(stats?.monthlyRevenue ?? 0)} icon={<EuroIcon />} color="#1565c0" />
+                <StatsCard title="Projected" value={fmt(stats?.projectedRevenue ?? 0)} icon={<TrendingUpIcon />} color="#00695c" />
+              </Box>
+            </Box>
           </>
         )}
       </Box>
