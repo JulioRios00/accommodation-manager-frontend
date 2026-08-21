@@ -5,6 +5,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import RestoreIcon from '@mui/icons-material/Restore';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -12,7 +13,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DataGrid, GridColDef, GridColumnVisibilityModel } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
-import { getProperties, getBeds, getBedrooms, getLandlords, createProperty, updateProperty, deleteProperty, Property, Bed, Bedroom, Landlord } from '@/services/api';
+import { getProperties, getBeds, getBedrooms, getLandlords, createProperty, updateProperty, deleteProperty, hardDeleteProperty, Property, Bed, Bedroom, Landlord } from '@/services/api';
 import PropertyDialog from '@/components/crud/PropertyDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -20,7 +21,7 @@ import { useRole } from '@/hooks/useRole';
 const COL_VIS_KEY = 'properties_col_visibility';
 
 export default function PropertiesPage() {
-  const { can } = useRole();
+  const { can, role } = useRole();
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
@@ -30,6 +31,7 @@ export default function PropertiesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [hardDeleteId, setHardDeleteId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
 
   // Column visibility persistence
@@ -72,6 +74,13 @@ export default function PropertiesPage() {
 
   const handleRestore = async (property: Property) => {
     await updateProperty(property.id, { ...property, active: true });
+    await load();
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    await hardDeleteProperty(hardDeleteId);
+    setHardDeleteId(null);
     await load();
   };
 
@@ -150,7 +159,7 @@ export default function PropertiesPage() {
     {
       field: 'actions',
       headerName: '',
-      width: 90,
+      width: 120,
       sortable: false,
       renderCell: (params) => (
         <Box onClick={e => e.stopPropagation()}>
@@ -170,6 +179,13 @@ export default function PropertiesPage() {
             <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
               <DeleteIcon fontSize="small" />
             </IconButton>
+          )}
+          {role === 'sysadmin' && (
+            <Tooltip title="Permanently delete property">
+              <IconButton size="small" color="error" onClick={() => setHardDeleteId(params.row.id)}>
+                <DeleteForeverIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
         </Box>
       ),
@@ -259,6 +275,13 @@ export default function PropertiesPage() {
         message="Delete this property? This cannot be undone."
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}
+      />
+      <ConfirmDialog
+        open={!!hardDeleteId}
+        title="Permanently delete property"
+        message="This will permanently erase this property and all of its beds, bookings, payments, and tickets — plus any residents who only ever lived here. This cannot be undone and cannot be recovered. Continue?"
+        onConfirm={handleHardDelete}
+        onCancel={() => setHardDeleteId(null)}
       />
     </Box>
   );

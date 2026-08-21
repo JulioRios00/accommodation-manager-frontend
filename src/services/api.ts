@@ -381,6 +381,8 @@ export const updateProperty = (id: string, data: Partial<Property>) =>
   api.put<Property>(`/properties/${id}`, data).then(r => r.data);
 export const deleteProperty = (id: string) =>
   api.delete(`/properties/${id}`);
+export const hardDeleteProperty = (id: string) =>
+  api.delete(`/properties/${id}/hard`);
 
 export const createBed = (data: Omit<Bed, 'id' | 'propertyCode' | 'bedroomName' | 'status' | 'activeBooking'>) =>
   api.post<Bed>('/beds', data).then(r => r.data);
