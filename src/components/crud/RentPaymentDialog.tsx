@@ -121,7 +121,7 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
           </Grid>
           <Grid size={{ xs: 4 }}>
             <TextField select label="Payment Status" value={form.paymentStatus} onChange={e => set('paymentStatus', e.target.value)} fullWidth size="small">
-              {['unpaid', 'paid'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+              {['unpaid', 'partially_paid', 'paid'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid size={{ xs: 4 }}><TextField label="Date Paid" type="date" value={form.datePaid ?? ''} onChange={e => set('datePaid', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>

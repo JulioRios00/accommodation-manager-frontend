@@ -21,7 +21,7 @@ import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
 
 const statusChip = (v: string) => {
-  const color = v === 'paid' || v === 'done' ? 'success' : v === 'partial' ? 'warning' : 'default';
+  const color = v === 'paid' || v === 'done' ? 'success' : v === 'partial' || v === 'partially_paid' ? 'warning' : 'default';
   return <Chip label={v} color={color as any} size="small" />;
 };
 
@@ -88,6 +88,10 @@ export default function PaymentsPage() {
   const rentColumns: GridColDef[] = [
     { field: 'month', headerName: 'Month', width: 100 },
     {
+      field: 'property', headerName: 'Property', width: 120,
+      valueGetter: (_v, row) => propertyById.get((row as RentPayment).propertyId)?.code ?? '',
+    },
+    {
       field: 'residentName', headerName: 'Resident Name', minWidth: 160, flex: 1,
       valueGetter: (_v, row) => residentById.get((row as RentPayment).residentId)?.fullName ?? '',
     },
@@ -97,11 +101,12 @@ export default function PaymentsPage() {
     },
     { field: 'rentAmount', headerName: 'Rent (€)', width: 100, type: 'number' },
     { field: 'amountPaid', headerName: 'Paid (€)', width: 100, type: 'number' },
+    { field: 'paymentDueDay', headerName: 'Rent Due Day', width: 110, type: 'number' },
     { field: 'lateStatus', headerName: 'Late Status', width: 130, renderCell: (p) => statusChip(p.value as string) },
     { field: 'paymentStatus', headerName: 'Payment Status', width: 130, renderCell: (p) => statusChip(p.value as string) },
     { field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => <Box>
-        {can('payment:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
+        {can('payment:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
         {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
       </Box> },
   ];
@@ -128,7 +133,7 @@ export default function PaymentsPage() {
     { field: 'status', headerName: 'Status', width: 110, renderCell: (p) => statusChip(p.value as string) },
     { field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => <Box>
-        {can('payment:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
+        {can('payment:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
         {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
       </Box> },
   ];
@@ -153,7 +158,7 @@ export default function PaymentsPage() {
     { field: 'dateProcessed', headerName: 'Processed', width: 120 },
     { field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => <Box>
-        {can('payment:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
+        {can('payment:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
         {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
       </Box> },
   ];
@@ -208,7 +213,7 @@ export default function PaymentsPage() {
         )}
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
-        {can('payment:write') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
+        {can('payment:edit') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
       </Box>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
         <Tab label="Rent Payments" />
