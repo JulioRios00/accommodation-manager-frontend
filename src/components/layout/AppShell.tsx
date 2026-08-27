@@ -32,6 +32,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import BusinessIcon from '@mui/icons-material/Business';
 import UploadIcon from '@mui/icons-material/Upload';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import HistoryIcon from '@mui/icons-material/History';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
@@ -58,6 +59,7 @@ const ALL_NAV_ITEMS: { label: string; href: string; icon: React.ReactNode; secti
   { label: 'Business Units',    href: '/companies',         icon: <BusinessIcon />,    section: 'Companies' },
   { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      section: 'Import Data' },
   { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   section: 'User Management' },
+  { label: 'Activity Log',      href: '/activity-log',      icon: <HistoryIcon />,     section: 'Activity Log' },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
