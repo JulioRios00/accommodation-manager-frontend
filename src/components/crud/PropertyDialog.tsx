@@ -27,7 +27,10 @@ const empty: FormState = {
   eirCode: null, propertyType: null,
   crn: null, propertyEmail: null,
   paymentReference: null, propertySupplier: null, paymentNotes: null, landlordPaymentDueDay: null,
+  residentPaymentDueDay: null,
   landlordId: null,
+  leaseStartDate: null,
+  leaseEndDate: null,
 };
 
 const statusOptions = ['', 'Pre', 'Active', 'Inactive'];
@@ -175,6 +178,39 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
           </Grid>
           <Grid size={{ xs: 3 }}>
             <TextField label="Property Email" value={form.propertyEmail ?? ''} onChange={e => set('propertyEmail', e.target.value)} fullWidth size="small" />
+          </Grid>
+          <Grid size={{ xs: 3 }}>
+            <TextField
+              label="Lease Start" type="date"
+              value={form.leaseStartDate ? form.leaseStartDate.slice(0, 10) : ''}
+              onChange={e => set('leaseStartDate', e.target.value)}
+              fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }}
+            />
+          </Grid>
+          <Grid size={{ xs: 3 }}>
+            <TextField
+              label="Lease End (blank = ongoing)" type="date"
+              value={form.leaseEndDate ? form.leaseEndDate.slice(0, 10) : ''}
+              onChange={e => set('leaseEndDate', e.target.value)}
+              fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }}
+            />
+          </Grid>
+          <Grid size={{ xs: 3 }}>
+            <TextField
+              select label="Status"
+              value={form.active === false ? 'Inactive' : 'Active'}
+              onChange={e => set('active', e.target.value !== 'Inactive')}
+              fullWidth size="small"
+              disabled={!!(form.leaseStartDate || form.leaseEndDate)}
+              helperText={
+                form.leaseStartDate || form.leaseEndDate
+                  ? 'Derived automatically from the lease dates above'
+                  : 'Inactive properties are hidden from active listings and new bookings'
+              }
+            >
+              <MenuItem value="Active">Active</MenuItem>
+              <MenuItem value="Inactive">Inactive</MenuItem>
+            </TextField>
           </Grid>
         </Grid>
 
@@ -342,6 +378,15 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
                   helperText="Day of month the landlord payment auto-generation uses"
                 />
               </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  label="Resident Due Day" type="number"
+                  value={form.residentPaymentDueDay ?? ''}
+                  onChange={e => set('residentPaymentDueDay', e.target.value ? +e.target.value : null)}
+                  fullWidth size="small" slotProps={{ htmlInput: { min: 1, max: 31 } }}
+                  helperText="Day of month rent is due for this property's residents"
+                />
+              </Grid>
               {(() => {
                 const selected = landlords.find(l => l.id === form.landlordId);
                 if (!selected) return null;
@@ -354,7 +399,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
                       <TextField label="BIC" value={selected.bic ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
                     </Grid>
                     <Grid size={{ xs: 6 }}>
-                      <TextField label="Resident Due Day" value={selected.residentPaymentDueDay ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
+                      <TextField label="Landlord's Resident Due Day (ref)" value={selected.residentPaymentDueDay ?? '—'} fullWidth size="small" slotProps={{ input: { readOnly: true } }} />
                     </Grid>
                   </>
                 );
