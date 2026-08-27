@@ -4,6 +4,8 @@ import {
   Box, Typography, TextField, MenuItem, Button, Chip,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getAuditLogs, getUsers, AuditLog, ClerkUser } from '@/services/api';
 
@@ -38,24 +40,44 @@ function changesSummary(log: AuditLog): string {
     .join('; ');
 }
 
+const COLLAPSE_THRESHOLD = 4;
+
 function ChangesList({ log }: { log: AuditLog }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (!log.changes.length) {
     return <Typography variant="body2" color="text.secondary">{log.action === 'delete' ? 'Record deleted' : '—'}</Typography>;
   }
+
+  const isLong = log.changes.length > COLLAPSE_THRESHOLD;
+  const visible = expanded || !isLong ? log.changes : log.changes.slice(0, COLLAPSE_THRESHOLD);
+
   return (
-    <Box component="ul" sx={{ m: 0, pl: 2.5, py: 0.75 }}>
-      {log.changes.map((c, i) => (
-        <Box component="li" key={i} sx={{ fontSize: 13, lineHeight: 1.7 }}>
-          <strong>{humanizeField(c.field)}:</strong>{' '}
-          {log.action === 'create' ? (
-            formatValue(c.after)
-          ) : log.action === 'delete' ? (
-            formatValue(c.before)
-          ) : (
-            <>{formatValue(c.before)} → {formatValue(c.after)}</>
-          )}
-        </Box>
-      ))}
+    <Box sx={{ py: 0.75 }}>
+      <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+        {visible.map((c, i) => (
+          <Box component="li" key={i} sx={{ fontSize: 13, lineHeight: 1.7 }}>
+            <strong>{humanizeField(c.field)}:</strong>{' '}
+            {log.action === 'create' ? (
+              formatValue(c.after)
+            ) : log.action === 'delete' ? (
+              formatValue(c.before)
+            ) : (
+              <>{formatValue(c.before)} → {formatValue(c.after)}</>
+            )}
+          </Box>
+        ))}
+      </Box>
+      {isLong && (
+        <Button
+          size="small"
+          onClick={() => setExpanded(e => !e)}
+          startIcon={expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          sx={{ ml: 1, py: 0, minHeight: 0, textTransform: 'none', fontSize: 12 }}
+        >
+          {expanded ? 'Show less' : `Show ${log.changes.length - COLLAPSE_THRESHOLD} more`}
+        </Button>
+      )}
     </Box>
   );
 }
