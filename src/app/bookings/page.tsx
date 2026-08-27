@@ -195,7 +195,7 @@ export default function BookingsPage() {
           <Tooltip title="Reset column visibility to default">
             <IconButton size="small" onClick={resetView}><RestoreIcon fontSize="small" /></IconButton>
           </Tooltip>
-          {canManage && (
+          {canEdit && (
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setReadOnly(false); setDialogOpen(true); }}>
               Add Booking
             </Button>

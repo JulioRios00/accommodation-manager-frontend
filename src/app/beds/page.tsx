@@ -100,7 +100,7 @@ export default function BedsPage() {
       sortable: false,
       renderCell: (params) => (
         <Box>
-          {can('bed:write') && (
+          {can('bed:edit') && (
             <IconButton size="small" onClick={() => { setEditing(params.row as Bed); setDialogOpen(true); }}>
               <EditIcon fontSize="small" />
             </IconButton>
@@ -129,7 +129,7 @@ export default function BedsPage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Beds</Typography>
-        {can('bed:write') && (
+        {can('bed:edit') && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
             Add Bed
           </Button>

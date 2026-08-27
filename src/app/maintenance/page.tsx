@@ -288,7 +288,7 @@ export default function MaintenancePage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
         <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Maintenance Tickets</Typography>
-        {canManage && tab === 0 && (
+        {canEdit && tab === 0 && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setReadOnly(false); setDialogOpen(true); }}>
             New Ticket
           </Button>

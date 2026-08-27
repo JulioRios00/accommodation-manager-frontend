@@ -197,7 +197,7 @@ export default function InventoryPage() {
           <TableCell align="right">Rent (€)</TableCell>
           <TableCell align="right">Deposit (€)</TableCell>
           <TableCell>Status</TableCell>
-          {can('bed:write') && <TableCell align="right" />}
+          {can('bed:edit') && <TableCell align="right" />}
         </TableRow>
       </TableHead>
       <TableBody>
@@ -237,14 +237,16 @@ export default function InventoryPage() {
               <TableCell align="right">{bed.rentAmount}</TableCell>
               <TableCell align="right">{bed.depositAmount}</TableCell>
               <TableCell><StatusChip status={bed.status} /></TableCell>
-              {can('bed:write') && (
+              {can('bed:edit') && (
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                   <IconButton size="small" onClick={() => openEditBed(bed)}>
                     <EditIcon fontSize="small" />
                   </IconButton>
-                  <IconButton size="small" color="error" onClick={() => setDeleteBedId(bed.id)}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+                  {can('bed:write') && (
+                    <IconButton size="small" color="error" onClick={() => setDeleteBedId(bed.id)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  )}
                 </TableCell>
               )}
             </TableRow>
@@ -262,7 +264,7 @@ export default function InventoryPage() {
           <TableCell align="center">Qty</TableCell>
           <TableCell>Condition</TableCell>
           <TableCell>Notes</TableCell>
-          {can('property:write') && <TableCell align="right" />}
+          {can('property:edit') && <TableCell align="right" />}
         </TableRow>
       </TableHead>
       <TableBody>
@@ -278,7 +280,7 @@ export default function InventoryPage() {
             <TableCell align="center">{item.quantity}</TableCell>
             <TableCell><ConditionChip condition={item.condition} /></TableCell>
             <TableCell sx={{ color: 'text.secondary', fontSize: 12 }}>{item.notes ?? '—'}</TableCell>
-            {can('property:write') && (
+            {can('property:edit') && (
               <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                 <IconButton size="small" onClick={() => {
                   setEditingItem(item);
@@ -287,11 +289,13 @@ export default function InventoryPage() {
                 }}>
                   <EditIcon fontSize="small" />
                 </IconButton>
-                <IconButton size="small" color="error" onClick={() =>
-                  setDeleteItemInfo({ spaceId: space.id, itemId: item.id })
-                }>
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
+                {can('property:write') && (
+                  <IconButton size="small" color="error" onClick={() =>
+                    setDeleteItemInfo({ spaceId: space.id, itemId: item.id })
+                  }>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                )}
               </TableCell>
             )}
           </TableRow>
@@ -325,7 +329,7 @@ export default function InventoryPage() {
             {bedrooms.length} bedroom{bedrooms.length !== 1 ? 's' : ''} · {beds.length} bed{beds.length !== 1 ? 's' : ''}
           </Typography>
         </Box>
-        {can('property:write') && (
+        {can('property:edit') && (
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => openAddBed(undefined)}>
               Add Bed
@@ -352,19 +356,21 @@ export default function InventoryPage() {
                 <Typography variant="caption" color="text.secondary">
                   {bedsForBedroom(bedroom.id).length} bed{bedsForBedroom(bedroom.id).length !== 1 ? 's' : ''}
                 </Typography>
-                {can('bed:write') && (
+                {can('bed:edit') && (
                   <Button size="small" startIcon={<AddIcon />} onClick={() => openAddBed(bedroom.id)}>
                     Add Bed
                   </Button>
                 )}
-                {can('property:write') && (
+                {can('property:edit') && (
                   <>
                     <IconButton size="small" onClick={() => { setEditingBedroom(bedroom); setBedroomDialogOpen(true); }}>
                       <EditIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" color="error" onClick={() => setDeleteBedroomId(bedroom.id)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                    {can('property:write') && (
+                      <IconButton size="small" color="error" onClick={() => setDeleteBedroomId(bedroom.id)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   </>
                 )}
               </Box>
@@ -382,7 +388,7 @@ export default function InventoryPage() {
               <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.secondary' }}>
                 Unassigned Beds
               </Typography>
-              {can('bed:write') && (
+              {can('bed:edit') && (
                 <Button size="small" startIcon={<AddIcon />} onClick={() => openAddBed(undefined)}>
                   Add Bed
                 </Button>
@@ -404,7 +410,7 @@ export default function InventoryPage() {
             {spaces.length} space{spaces.length !== 1 ? 's' : ''}
           </Typography>
         </Box>
-        {can('property:write') && (
+        {can('property:edit') && (
           <Button
             variant="contained" size="small" startIcon={<AddIcon />}
             onClick={() => { setEditingSpace(null); setSpaceDialogOpen(true); }}
@@ -435,7 +441,7 @@ export default function InventoryPage() {
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {can('property:write') && (
+                {can('property:edit') && (
                   <Tooltip title="Add item">
                     <Button size="small" startIcon={<AddIcon />} onClick={() => {
                       setEditingItem(null);
@@ -446,14 +452,16 @@ export default function InventoryPage() {
                     </Button>
                   </Tooltip>
                 )}
-                {can('property:write') && (
+                {can('property:edit') && (
                   <>
                     <IconButton size="small" onClick={() => { setEditingSpace(space); setSpaceDialogOpen(true); }}>
                       <EditIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" color="error" onClick={() => setDeleteSpaceId(space.id)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                    {can('property:write') && (
+                      <IconButton size="small" color="error" onClick={() => setDeleteSpaceId(space.id)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   </>
                 )}
               </Box>

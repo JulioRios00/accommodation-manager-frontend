@@ -163,12 +163,12 @@ export default function PropertiesPage() {
       sortable: false,
       renderCell: (params) => (
         <Box onClick={e => e.stopPropagation()}>
-          {can('property:write') && (
+          {can('property:edit') && (
             <IconButton size="small" onClick={() => { setEditing(params.row as Property); setDialogOpen(true); }}>
               <EditIcon fontSize="small" />
             </IconButton>
           )}
-          {can('property:write') && params.row.active === false && (
+          {can('property:edit') && params.row.active === false && (
             <Tooltip title="Restore property">
               <IconButton size="small" color="success" onClick={() => handleRestore(params.row as Property)}>
                 <UndoIcon fontSize="small" />
@@ -207,7 +207,7 @@ export default function PropertiesPage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Properties</Typography>
-        {can('property:write') && (
+        {can('property:edit') && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
             Add Property
           </Button>

@@ -11,7 +11,7 @@ export const ACCESS_LEVELS: AccessLevel[] = ['Full', 'View+Edit', 'View', 'None'
 export const SECTIONS = [
   'Dashboard', 'Properties', 'Beds', 'Residents', 'Bookings', 'Landlords',
   'Service Providers', 'Maintenance', 'Key Log', 'Payments', 'Reports',
-  'Companies', 'Import Data', 'User Management',
+  'Companies', 'Import Data', 'User Management', 'Activity Log',
 ] as const;
 
 export type Section = typeof SECTIONS[number];
@@ -38,14 +38,15 @@ const SECTION_BY_KEY = {
   company: 'Companies',
   import: 'Import Data',
   user: 'User Management',
+  activityLog: 'Activity Log',
 } as const satisfies Record<string, Section>;
 
 type SectionKey = keyof typeof SECTION_BY_KEY;
 
 /**
  * `view`  — read the section (level ≥ View)
- * `edit`  — change existing records (level ≥ View+Edit)
- * `write` — create and delete records (level = Full)
+ * `edit`  — create and change records (level ≥ View+Edit)
+ * `write` — delete records (level = Full)
  */
 export type Verb = 'view' | 'edit' | 'write';
 
@@ -62,12 +63,12 @@ export const DEFAULT_MATRIX: Record<UserRole, Record<Section, AccessLevel>> = {
   sysadmin:      buildRow('Full'),
   manager:       buildRow('Full'),
   administrator: { ...buildRow('View'), 'Residents': 'View+Edit', 'Import Data': 'None', 'User Management': 'None' },
-  staff:         { ...buildRow('View'), 'Import Data': 'None', 'User Management': 'None' },
+  staff:         { ...buildRow('View'), 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None' },
   maintenance:   {
     ...buildRow('View'),
     'Maintenance': 'View+Edit',
     'Landlords': 'None', 'Payments': 'None', 'Reports': 'None',
-    'Companies': 'None', 'Import Data': 'None', 'User Management': 'None',
+    'Companies': 'None', 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None',
   },
   resident:      buildRow('None'),
 };

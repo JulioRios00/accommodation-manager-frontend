@@ -46,7 +46,7 @@ export default function LandlordsPage() {
       field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => (
         <Box>
-          {can('landlord:write') && (
+          {can('landlord:edit') && (
             <IconButton size="small" onClick={() => { setEditing(params.row as Landlord); setDialogOpen(true); }}>
               <EditIcon fontSize="small" />
             </IconButton>
@@ -70,7 +70,7 @@ export default function LandlordsPage() {
         <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Landlords</Typography>
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
-        {can('landlord:write') && (
+        {can('landlord:edit') && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>
         )}
       </Box>

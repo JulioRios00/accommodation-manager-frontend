@@ -33,7 +33,7 @@ export default function CompaniesPage() {
       field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => (
         <Box>
-          {can('company:write') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
+          {can('company:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
           {can('company:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
         </Box>
       ),
@@ -49,7 +49,7 @@ export default function CompaniesPage() {
         <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Business Units</Typography>
         <TextField size="small" placeholder="Search by BU, name, email…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
-        {can('company:write') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
+        {can('company:edit') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
       </Box>
       <DataGrid
         rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick

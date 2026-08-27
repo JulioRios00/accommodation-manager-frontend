@@ -90,7 +90,7 @@ export default function ResidentsPage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Residents</Typography>
-        {can('resident:write') && (
+        {can('resident:edit') && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>
             Add Resident
           </Button>
