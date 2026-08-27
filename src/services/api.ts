@@ -119,8 +119,11 @@ export interface Property {
   propertySupplier: string | null;
   paymentNotes: string | null;
   landlordPaymentDueDay: number | null;
+  residentPaymentDueDay: number | null;
   officeKeysComment: string | null;
   landlordId: string | null;
+  leaseStartDate: string | null;
+  leaseEndDate: string | null;
   active?: boolean;
 }
 
@@ -290,6 +293,16 @@ export interface DelinquencyRow {
   lateStatus: string;
 }
 
+export interface PortfolioSnapshotRow {
+  propertyCode: string;
+  propertyLeaseActive: boolean;
+  bedCode: string;
+  residentName: string;
+  checkInDate: string | null;
+  endDate: string | null;
+  rentAmount: number;
+}
+
 export interface Resident {
   id: string;
   clerkUserId: string | null;
@@ -322,6 +335,8 @@ export interface Booking {
   isTemporary: boolean;
   status: 'active' | 'upcoming' | 'completed';
   comments: string | null;
+  /** Write-only: how a rent/deposit change should propagate. Never present on reads. */
+  rentChangeScope?: 'payment' | 'period' | 'bed';
   /** Summaries joined server-side so grids can show readable codes/names. */
   resident?: { id: string; fullName: string; email: string | null; telephone: string | null } | null;
   bed?: {
@@ -565,9 +580,30 @@ export const updateRolePermissions = (matrix: PermissionMatrix) =>
 export const resetRolePermissions = () =>
   api.delete<PermissionMatrix>('/role-permissions').then(r => r.data);
 
+// Activity Log
+export interface AuditFieldChange {
+  field: string;
+  before: unknown;
+  after: unknown;
+}
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userRole: string | null;
+  action: 'create' | 'update' | 'delete';
+  entityType: string;
+  entityId: string;
+  changes: AuditFieldChange[];
+  createdAt: string;
+}
+export const getAuditLogs = (params?: { userId?: string; entityType?: string; dateFrom?: string; dateTo?: string }) =>
+  api.get<AuditLog[]>('/audit-logs', { params }).then(r => r.data);
+
 // Reports
 export const getDelinquencyReport = (params?: { propertyId?: string; month?: string }) =>
   api.get<DelinquencyRow[]>('/reports/delinquency', { params }).then(r => r.data);
+export const getPortfolioSnapshot = (date: string) =>
+  api.get<PortfolioSnapshotRow[]>('/reports/portfolio-snapshot', { params: { date } }).then(r => r.data);
 export const exportDelinquencyReportCsv = (params?: { propertyId?: string; month?: string }) =>
   api.get('/reports/delinquency', { params: { ...params, format: 'csv' }, responseType: 'blob' }).then(r => {
     const url = URL.createObjectURL(r.data);
