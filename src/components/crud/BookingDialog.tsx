@@ -2,9 +2,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
-  FormControlLabel, Grid, MenuItem, TextField,
+  FormControlLabel, Grid, MenuItem, TextField, Radio, RadioGroup, FormControl,
+  FormLabel, DialogContentText,
 } from '@mui/material';
 import { Booking, Bed, Resident, Property } from '@/services/api';
+
+type RentChangeScope = 'payment' | 'period' | 'bed';
 
 type FormState = {
   bedId: string;
@@ -41,12 +44,14 @@ interface Props {
   residents: Resident[];
   properties?: Property[];
   onClose: () => void;
-  onSave: (data: Omit<FormState, 'propertyId'>, id?: string) => Promise<void>;
+  onSave: (data: Omit<FormState, 'propertyId'> & { rentChangeScope?: RentChangeScope }, id?: string) => Promise<void>;
 }
 
 export default function BookingDialog({ open, initial, readOnly = false, beds, residents, properties = [], onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
+  const [scopePromptOpen, setScopePromptOpen] = useState(false);
+  const [rentChangeScope, setRentChangeScope] = useState<RentChangeScope>('period');
 
   useEffect(() => {
     if (initial) {
@@ -98,7 +103,12 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
     });
   }, [propertyBeds, form.checkInDate, initial]);
 
-  const handleSave = async () => {
+  // Editing an existing booking's rent/deposit needs to know how the change should
+  // propagate — ask before saving rather than guessing.
+  const rentOrDepositChanged =
+    !!initial && (form.rentAmount !== initial.rentAmount || form.depositAmount !== initial.depositAmount);
+
+  const doSave = async (scope?: RentChangeScope) => {
     setSaving(true);
     try {
       const { propertyId: _pid, ...rest } = form;
@@ -107,11 +117,22 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
         checkInDate: rest.checkInDate || '',
         contractEndDate: rest.contractEndDate || '',
         checkOutDate: rest.checkOutDate || '',
+        ...(scope ? { rentChangeScope: scope } : {}),
       }, initial?.id);
       onClose();
     } finally {
       setSaving(false);
+      setScopePromptOpen(false);
     }
+  };
+
+  const handleSave = async () => {
+    if (rentOrDepositChanged) {
+      setRentChangeScope('period');
+      setScopePromptOpen(true);
+      return;
+    }
+    await doSave();
   };
 
   return (
@@ -142,7 +163,18 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
 
           <Grid size={{ xs: 12 }}>
             <TextField
-              select label="Bed *" value={form.bedId} onChange={e => set('bedId', e.target.value)}
+              select label="Bed *" value={form.bedId}
+              onChange={e => {
+                const bedId = e.target.value;
+                // Pre-fill Rent/Deposit from the bed's default on a new booking — the fields
+                // stay editable so a specific booking can still override them (e.g. a discount).
+                const bed = !initial ? beds.find(b => b.id === bedId) : undefined;
+                setForm(f => ({
+                  ...f,
+                  bedId,
+                  ...(bed ? { rentAmount: bed.rentAmount, depositAmount: bed.depositAmount } : {}),
+                }));
+              }}
               fullWidth required size="small" disabled={readOnly}
               helperText={!form.checkInDate ? 'Enter check-in date first to see available beds' : `${availableBeds.length} bed(s) available on ${form.checkInDate}`}
             >
@@ -196,6 +228,33 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
           </Button>
         )}
       </DialogActions>
+
+      <Dialog open={scopePromptOpen} onClose={() => setScopePromptOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Apply rent/deposit change to…</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            You changed the rent or deposit for this booking. How should it apply?
+          </DialogContentText>
+          <FormControl>
+            <FormLabel id="rent-change-scope-label" sx={{ display: 'none' }}>Scope</FormLabel>
+            <RadioGroup
+              aria-labelledby="rent-change-scope-label"
+              value={rentChangeScope}
+              onChange={e => setRentChangeScope(e.target.value as RentChangeScope)}
+            >
+              <FormControlLabel value="payment" control={<Radio />} label="Just this next payment" />
+              <FormControlLabel value="period" control={<Radio />} label="All payments within this booking period" />
+              <FormControlLabel value="bed" control={<Radio />} label="This, and set as the new bed price going forward" />
+            </RadioGroup>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setScopePromptOpen(false)}>Cancel</Button>
+          <Button variant="contained" disabled={saving} onClick={() => doSave(rentChangeScope)}>
+            {saving ? 'Saving…' : 'Confirm'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }
