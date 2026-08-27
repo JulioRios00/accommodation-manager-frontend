@@ -16,16 +16,48 @@ const ACTION_COLOR: Record<string, 'success' | 'info' | 'error'> = {
 };
 
 function formatValue(v: unknown): string {
-  if (v === null || v === undefined) return '—';
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
+}
+
+// clerkUserId -> "Clerk User ID", paymentDueDay -> "Payment Due Day", iban -> "IBAN"
+function humanizeField(field: string): string {
+  const spaced = field.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^./, s => s.toUpperCase());
+  return spaced
+    .split(' ')
+    .map(word => (word === 'Id' ? 'ID' : word === 'Iban' ? 'IBAN' : word))
+    .join(' ');
 }
 
 function changesSummary(log: AuditLog): string {
   if (!log.changes.length) return log.action === 'delete' ? 'Record deleted' : '—';
   return log.changes
-    .map(c => `${c.field}: ${formatValue(c.before)} → ${formatValue(c.after)}`)
+    .map(c => `${humanizeField(c.field)}: ${formatValue(c.before)} → ${formatValue(c.after)}`)
     .join('; ');
+}
+
+function ChangesList({ log }: { log: AuditLog }) {
+  if (!log.changes.length) {
+    return <Typography variant="body2" color="text.secondary">{log.action === 'delete' ? 'Record deleted' : '—'}</Typography>;
+  }
+  return (
+    <Box component="ul" sx={{ m: 0, pl: 2.5, py: 0.75 }}>
+      {log.changes.map((c, i) => (
+        <Box component="li" key={i} sx={{ fontSize: 13, lineHeight: 1.7 }}>
+          <strong>{humanizeField(c.field)}:</strong>{' '}
+          {log.action === 'create' ? (
+            formatValue(c.after)
+          ) : log.action === 'delete' ? (
+            formatValue(c.before)
+          ) : (
+            <>{formatValue(c.before)} → {formatValue(c.after)}</>
+          )}
+        </Box>
+      ))}
+    </Box>
+  );
 }
 
 export default function ActivityLogPage() {
@@ -79,8 +111,9 @@ export default function ActivityLogPage() {
     { field: 'entityType', headerName: 'Entity', width: 110 },
     { field: 'entityId', headerName: 'Entity ID', width: 130 },
     {
-      field: 'changes', headerName: 'Changes', minWidth: 300, flex: 1,
+      field: 'changes', headerName: 'Changes', minWidth: 320, flex: 1,
       valueGetter: (_v, row) => changesSummary(row as AuditLog),
+      renderCell: (params) => <ChangesList log={params.row as AuditLog} />,
     },
   ];
 
