@@ -13,11 +13,9 @@ import RadarIcon from '@mui/icons-material/Radar';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import EuroIcon from '@mui/icons-material/Euro';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
 import RestoreIcon from '@mui/icons-material/Restore';
 import ClearIcon from '@mui/icons-material/Clear';
 import StatsCard from '@/components/dashboard/StatsCard';
-import XlsxUploader from '@/components/upload/XlsxUploader';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import { getDashboardStats, getProperties, getBeds, getResidents, getCompanies, updateResident, createResident, DashboardStats, Bed, Property, Resident } from '@/services/api';
 import { useRole } from '@/hooks/useRole';
@@ -57,14 +55,13 @@ function CellCenter({ children }: { children: React.ReactNode }) {
 }
 
 export default function DashboardPage() {
-  const { can, level } = useRole();
+  const { level } = useRole();
   const canViewFinancials = level('Dashboard') === 'Full';
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [buOptions, setBuOptions] = useState<string[]>([]);
-  const [importOpen, setImportOpen] = useState(false);
 
   // Filter state
   const [typeFilter, setTypeFilter] = useState('');
@@ -350,15 +347,6 @@ export default function DashboardPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Dashboard</Typography>
-        {can('import:write') && (
-          <Button
-            variant="outlined" size="small" startIcon={<UploadFileIcon />}
-            onClick={() => setImportOpen(v => !v)}
-            sx={{ borderColor: '#114C5A', color: '#114C5A', whiteSpace: 'nowrap' }}
-          >
-            Import XLSX
-          </Button>
-        )}
       </Box>
 
       {/* ── Global KPI cards, grouped into Properties / Beds / Monthly Revenue ── */}
@@ -414,13 +402,6 @@ export default function DashboardPage() {
           </>
         )}
       </Box>
-
-      {/* Collapsible import */}
-      {importOpen && (
-        <Box sx={{ mb: 3 }}>
-          <XlsxUploader onImported={() => { loadData(); setImportOpen(false); }} />
-        </Box>
-      )}
 
       {/* ── Filters ─────────────────────────────────────────────────────────── */}
       <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
