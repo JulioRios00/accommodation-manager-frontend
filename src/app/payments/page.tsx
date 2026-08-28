@@ -18,6 +18,7 @@ import RentPaymentDialog from '@/components/crud/RentPaymentDialog';
 import LandlordPaymentDialog from '@/components/crud/LandlordPaymentDialog';
 import DepositTransactionDialog from '@/components/crud/DepositTransactionDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
+import { bedCode } from '@/lib/bedCode';
 import { useRole } from '@/hooks/useRole';
 
 const statusChip = (v: string) => {
@@ -78,7 +79,7 @@ export default function PaymentsPage() {
   const landlordById = useMemo(() => new Map(landlords.map(l => [l.id, l])), [landlords]);
   const bookingById = useMemo(() => new Map(bookings.map(b => [b.id, b])), [bookings]);
 
-  const bedCodeForBed = (bed?: Bed) => bed ? `${bed.propertyCode ?? '?'}-${bed.bedNumber}` : '';
+  const bedCodeForBed = (bed?: Bed) => bedCode(bed);
   const bedCodeForBooking = (bookingId?: string | null) => {
     if (!bookingId) return '';
     const booking = bookingById.get(bookingId);

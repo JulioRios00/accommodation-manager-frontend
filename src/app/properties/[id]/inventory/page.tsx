@@ -28,6 +28,7 @@ import SpaceItemDialog from '@/components/crud/SpaceItemDialog';
 import ResidentDialog from '@/components/crud/ResidentDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { bedCode } from '@/lib/bedCode';
 
 type BedFormState = Omit<Bed, 'id' | 'propertyCode' | 'activeBooking'>;
 
@@ -213,7 +214,7 @@ export default function InventoryPage() {
           return (
             <TableRow key={bed.id} hover>
               <TableCell sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                {bed.propertyCode ?? ''}-{bed.bedNumber}
+                {bedCode(bed)}
               </TableCell>
               <TableCell
                 onDoubleClick={() => {

@@ -8,6 +8,7 @@ import {
   Resident, Property, Bed, Booking,
   getProperties, getBeds, getBookings, createBooking, updateBooking,
 } from '@/services/api';
+import { bedCode } from '@/lib/bedCode';
 
 type FormState = Omit<Resident, 'id'>;
 
@@ -227,8 +228,7 @@ export default function ResidentDialog({ open, initial, onClose, onSave }: Props
               <MenuItem value=""><em>— none —</em></MenuItem>
               {bedsForProperty.map(b => (
                 <MenuItem key={b.id} value={b.id}>
-                  {b.propertyCode ?? ''}-{b.bedNumber}
-                  {b.bedroomName ? ` · ${b.bedroomName}` : ''}
+                  {bedCode(b)}
                   {b.bedroomType ? ` (${b.bedroomType})` : ''}
                 </MenuItem>
               ))}

@@ -17,6 +17,7 @@ import {
 import BookingDialog from '@/components/crud/BookingDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { bedCode } from '@/lib/bedCode';
 
 const COL_VIS_KEY = 'bookings_col_visibility';
 
@@ -25,10 +26,10 @@ function formatDate(d: string | null | undefined) {
   return new Date(d).toLocaleDateString('en-GB');
 }
 
-/** Human-readable bed label, e.g. "SD01-4" — falls back to the raw id only if unjoined. */
+/** Human-readable bed label, e.g. "SD01-A4" — falls back to the raw id only if unjoined. */
 function bedLabel(b: Booking) {
   if (!b.bed) return b.bedId;
-  return [b.bed.propertyCode, b.bed.bedNumber].filter(v => v !== null && v !== undefined).join('-');
+  return bedCode(b.bed);
 }
 
 const statusColor = (s: string) =>

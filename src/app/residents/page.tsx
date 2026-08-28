@@ -11,6 +11,7 @@ import { getResidents, createResident, updateResident, deleteResident, getBeds, 
 import ResidentDialog from '@/components/crud/ResidentDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { bedCode } from '@/lib/bedCode';
 
 export default function ResidentsPage() {
   const { can } = useRole();
@@ -27,7 +28,7 @@ export default function ResidentsPage() {
     const map = new Map<string, string>();
     for (const booking of bookings) {
       const bed = bedById.get(booking.bedId);
-      if (bed) map.set(booking.residentId, `${bed.propertyCode ?? '?'}-${bed.bedNumber}`);
+      if (bed) map.set(booking.residentId, bedCode(bed));
     }
     setBedCodeByResident(map);
   }).catch(() => {});

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField } from '@mui/material';
 import { DepositTransaction, Property, Resident, Bed, getProperties, getResidents, getBeds } from '@/services/api';
+import { bedCode } from '@/lib/bedCode';
 
 type FormState = Omit<DepositTransaction, 'id'>;
 const empty: FormState = { type: 'receipt', residentId: '', bookingId: null, propertyId: '', bedId: null, residentName: '', checkoutDate: null, depositAmount: 0, proRataRentAmount: null, iban: null, payeeAddress: null, status: 'pending', dateProcessed: null, bankReference: null, company: null, comments: null };
@@ -63,7 +64,7 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
               select label="Bed Code" value={form.bedId ?? ''} onChange={e => set('bedId', e.target.value)}
               fullWidth size="small" disabled={!form.propertyId}
             >
-              {propertyBeds.map(b => <MenuItem key={b.id} value={b.id}>{b.propertyCode ?? ''}-{b.bedNumber}</MenuItem>)}
+              {propertyBeds.map(b => <MenuItem key={b.id} value={b.id}>{bedCode(b)}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}><TextField label="Resident Name" value={form.residentName} onChange={e => set('residentName', e.target.value)} fullWidth required size="small" /></Grid>

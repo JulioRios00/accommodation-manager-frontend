@@ -19,6 +19,7 @@ import StatsCard from '@/components/dashboard/StatsCard';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import { getDashboardStats, getProperties, getBeds, getResidents, getCompanies, updateResident, createResident, DashboardStats, Bed, Property, Resident } from '@/services/api';
 import { useRole } from '@/hooks/useRole';
+import { bedCode } from '@/lib/bedCode';
 import ResidentDialog from '@/components/crud/ResidentDialog';
 
 const PROPERTY_TYPES = ['House', 'Apartment', 'Duplex', 'Studio Block', 'Other'];
@@ -233,7 +234,7 @@ export default function DashboardPage() {
       })
       .map(bed => ({
         id: bed.id,
-        bedCode: `${bed.propertyCode ?? '?'}-${bed.bedNumber}`,
+        bedCode: bedCode(bed),
         bedroomType: bed.bedroomType,
         sex: bed.sex,
         bedSize: bed.bedSize,

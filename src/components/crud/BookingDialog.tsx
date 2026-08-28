@@ -6,6 +6,7 @@ import {
   FormLabel, DialogContentText,
 } from '@mui/material';
 import { Booking, Bed, Resident, Property } from '@/services/api';
+import { bedCode } from '@/lib/bedCode';
 
 type RentChangeScope = 'payment' | 'period' | 'bed';
 
@@ -180,7 +181,7 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
             >
               {availableBeds.map(b => (
                 <MenuItem key={b.id} value={b.id}>
-                  {b.propertyCode}-{b.bedNumber} ({b.bedroomType}){b.status === 'allocated' ? ' — frees on check-in' : ''}
+                  {bedCode(b)} ({b.bedroomType}){b.status === 'allocated' ? ' — frees on check-in' : ''}
                 </MenuItem>
               ))}
             </TextField>

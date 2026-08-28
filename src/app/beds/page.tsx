@@ -11,6 +11,7 @@ import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import BedDialog from '@/components/crud/BedDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { bedCode } from '@/lib/bedCode';
 
 type BedFormState = Omit<Bed, 'id' | 'propertyCode' | 'activeBooking'>;
 
@@ -51,7 +52,7 @@ export default function BedsPage() {
       field: 'bedCode',
       headerName: 'Bed Code',
       width: 110,
-      valueGetter: (_v, row) => `${(row as Bed).propertyCode ?? ''}-${(row as Bed).bedNumber}`,
+      valueGetter: (_v, row) => bedCode(row as Bed),
       renderCell: (params) => (
         <Box sx={{ fontFamily: 'monospace', fontWeight: 600 }}>{params.value}</Box>
       ),
@@ -119,7 +120,7 @@ export default function BedsPage() {
   const filtered = beds.filter(b => {
     const residentName = b.activeBooking?.residentId ? residentMap.get(b.activeBooking.residentId)?.fullName : undefined;
     return [
-      `${b.propertyCode ?? ''}-${b.bedNumber}`,
+      bedCode(b),
       b.bedroomType, b.sex, b.bedSize, b.propertyCode,
       b.bedroomName, b.name, b.status, residentName,
     ].some(v => v?.toLowerCase().includes(q));

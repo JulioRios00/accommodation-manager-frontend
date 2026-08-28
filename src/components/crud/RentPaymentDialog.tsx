@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField } from '@mui/material';
 import { RentPayment, Property, Resident, Booking, Bed, getProperties, getResidents, getBookings, getBeds } from '@/services/api';
+import { bedCode } from '@/lib/bedCode';
 
 type FormState = Omit<RentPayment, 'id'>;
 const empty: FormState = { residentId: '', bookingId: '', propertyId: '', month: '', paymentDueDay: null, rentAmount: 0, amountPaid: 0, lateStatus: 'on_time', paymentStatus: 'unpaid', datePaid: null, notes: null };
@@ -76,7 +77,7 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
 
   const bookingLabel = (b: Booking) => {
     const bed = beds.find(bd => bd.id === b.bedId);
-    return bed ? `Bed ${bed.propertyCode ?? ''}-${bed.bedNumber}` : b.bedId.slice(0, 8);
+    return bed ? `Bed ${bedCode(bed)}` : b.bedId.slice(0, 8);
   };
 
   return (
