@@ -390,6 +390,23 @@ export const importXlsx = (file: File, endpoint = '/import') => {
   return api.post(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
 };
 
+export interface ImportJobStatus {
+  id: string;
+  status: 'running' | 'completed' | 'failed';
+  result?: { message: string; [key: string]: unknown };
+  error?: string;
+}
+// The Accommodation Control import can take minutes (thousands of CheckedOut rows) — too long
+// for any proxy in front of the API to hold a request open, so this endpoint returns a job id
+// immediately and the caller polls getImportJobStatus instead of awaiting the upload itself.
+export const startImportJob = (file: File, endpoint = '/import') => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post<{ jobId: string }>(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+};
+export const getImportJobStatus = (jobId: string, endpoint = '/import') =>
+  api.get<ImportJobStatus>(`${endpoint}/status/${jobId}`).then(r => r.data);
+
 // --- Create / Update ---
 export const createProperty = (data: Omit<Property, 'id'>) =>
   api.post<Property>('/properties', data).then(r => r.data);

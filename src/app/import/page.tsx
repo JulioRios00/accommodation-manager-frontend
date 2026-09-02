@@ -15,6 +15,7 @@ interface ImportCard {
   endpoint: string;
   accepts: string;
   icon: React.ReactNode;
+  background?: boolean;
 }
 
 const imports: ImportCard[] = [
@@ -24,6 +25,7 @@ const imports: ImportCard[] = [
     endpoint: '/import',
     accepts: '.xlsx,.xlsm',
     icon: <ApartmentIcon sx={{ fontSize: 32, color: '#DE9151' }} />,
+    background: true,
   },
   {
     title: 'Bills & Utilities',
@@ -85,7 +87,7 @@ export default function ImportPage() {
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{item.description}</Typography>
             <Divider sx={{ mb: 2 }} />
-            <XlsxUploader endpoint={item.endpoint} label="Drop file here or click to browse" />
+            <XlsxUploader endpoint={item.endpoint} label="Drop file here or click to browse" background={item.background} />
           </Paper>
         ))}
       </Box>
