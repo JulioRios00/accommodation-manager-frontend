@@ -61,6 +61,7 @@ api.interceptors.response.use(
 
 export interface DashboardStats {
   totalProperties: number;
+  inactiveProperties: number;
   totalBeds: number;
   occupiedBeds: number;
   availableBeds: number;

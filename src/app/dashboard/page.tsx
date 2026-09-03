@@ -9,6 +9,7 @@ import ApartmentIcon from '@mui/icons-material/Apartment';
 import BedIcon from '@mui/icons-material/Bed';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DoNotDisturbIcon from '@mui/icons-material/DoNotDisturb';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import RadarIcon from '@mui/icons-material/Radar';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import EuroIcon from '@mui/icons-material/Euro';
@@ -359,6 +360,7 @@ export default function DashboardPage() {
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
             <StatsCard title="Properties" value={stats?.totalProperties ?? 0} icon={<ApartmentIcon />} color="#114C5A" />
             <StatsCard title="Occupancy" value={`${stats?.occupancyRate ?? 0}%`} icon={<BarChartIcon />} color="#6a1b9a" />
+            <StatsCard title="Inactive" value={stats?.inactiveProperties ?? 0} icon={<VisibilityOffIcon />} color="#757575" />
           </Box>
         </Box>
 
