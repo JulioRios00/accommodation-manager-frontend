@@ -29,6 +29,7 @@ import EngineeringIcon from '@mui/icons-material/Engineering';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import BuildIcon from '@mui/icons-material/Build';
 import BusinessIcon from '@mui/icons-material/Business';
 import UploadIcon from '@mui/icons-material/Upload';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
@@ -56,6 +57,7 @@ const ALL_NAV_ITEMS: { label: string; href: string; icon: React.ReactNode; secti
   { label: 'Key Log',           href: '/key-logs',          icon: <VpnKeyIcon />,      section: 'Key Log' },
   { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon />,    section: 'Payments' },
   { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon />,  section: 'Reports' },
+  { label: 'Custom Reports',    href: '/reports/custom',    icon: <BuildIcon />,       section: 'Custom Reports' },
   { label: 'Business Units',    href: '/companies',         icon: <BusinessIcon />,    section: 'Companies' },
   { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      section: 'Import Data' },
   { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   section: 'User Management' },

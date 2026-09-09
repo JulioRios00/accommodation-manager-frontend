@@ -630,3 +630,51 @@ export const exportDelinquencyReportCsv = (params?: { propertyId?: string; month
     a.href = url; a.download = 'delinquency-report.csv'; a.click();
     URL.revokeObjectURL(url);
   });
+
+// Custom Report Builder (UC-402)
+export type ReportEntityKey =
+  | 'properties' | 'beds' | 'residents' | 'licenceAgreements' | 'maintenanceOperations' | 'landlordAccounts';
+export type ReportFieldType = 'string' | 'number' | 'currency' | 'boolean' | 'date' | 'enum';
+export type ReportFilterOperator = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'contains' | 'in';
+
+export const OPERATORS_BY_TYPE: Record<ReportFieldType, ReportFilterOperator[]> = {
+  string: ['=', '!=', 'contains', 'in'],
+  number: ['=', '!=', '>', '>=', '<', '<=', 'in'],
+  currency: ['=', '!=', '>', '>=', '<', '<=', 'in'],
+  boolean: ['=', '!='],
+  date: ['=', '!=', '>', '>=', '<', '<='],
+  enum: ['=', '!=', 'in'],
+};
+
+export interface ReportEntityMeta { key: ReportEntityKey; label: string }
+export interface ReportFieldMeta {
+  key: string; label: string; type: ReportFieldType; filterable: boolean; sortable: boolean; enumValues?: string[];
+}
+export interface ReportFilter { field: string; operator: ReportFilterOperator; value: unknown }
+export interface ReportSort { field: string; direction: 'ASC' | 'DESC' }
+export interface ReportQueryRequest {
+  entity: ReportEntityKey; fields: string[]; filters: ReportFilter[]; sort: ReportSort[];
+}
+export interface ReportPreviewResult { rows: Record<string, unknown>[]; total: number; capped: boolean }
+
+export const getReportEntities = () => api.get<ReportEntityMeta[]>('/reports/entities').then(r => r.data);
+export const getReportEntityFields = (entityKey: string) =>
+  api.get<ReportFieldMeta[]>(`/reports/entities/${entityKey}/fields`).then(r => r.data);
+export const previewCustomReport = (payload: ReportQueryRequest) =>
+  api.post<ReportPreviewResult>('/reports/preview', payload).then(r => r.data);
+
+function downloadBlob(blob: Blob, fallbackName: string, contentDisposition?: string) {
+  const match = contentDisposition?.match(/filename="?([^"]+)"?/);
+  const filename = match?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+export const exportCustomReportPdf = (payload: ReportQueryRequest) =>
+  api.post('/reports/export/pdf', payload, { responseType: 'blob' }).then(r =>
+    downloadBlob(r.data, `${payload.entity}-report.pdf`, r.headers['content-disposition']));
+export const exportCustomReportXlsx = (payload: ReportQueryRequest) =>
+  api.post('/reports/export/xlsx', payload, { responseType: 'blob' }).then(r =>
+    downloadBlob(r.data, `${payload.entity}-report.xlsx`, r.headers['content-disposition']));

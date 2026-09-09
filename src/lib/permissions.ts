@@ -10,7 +10,7 @@ export const ACCESS_LEVELS: AccessLevel[] = ['Full', 'View+Edit', 'View', 'None'
 /** Sections the matrix is defined over. Must stay in sync with the backend list. */
 export const SECTIONS = [
   'Dashboard', 'Properties', 'Beds', 'Residents', 'Bookings', 'Landlords',
-  'Service Providers', 'Maintenance', 'Key Log', 'Payments', 'Reports',
+  'Service Providers', 'Maintenance', 'Key Log', 'Payments', 'Reports', 'Custom Reports',
   'Companies', 'Import Data', 'User Management', 'Activity Log',
 ] as const;
 
@@ -35,6 +35,7 @@ const SECTION_BY_KEY = {
   keyLog: 'Key Log',
   payment: 'Payments',
   report: 'Reports',
+  customReport: 'Custom Reports',
   company: 'Companies',
   import: 'Import Data',
   user: 'User Management',
@@ -62,12 +63,12 @@ const VERB_MINIMUM: Record<Verb, AccessLevel> = {
 export const DEFAULT_MATRIX: Record<UserRole, Record<Section, AccessLevel>> = {
   sysadmin:      buildRow('Full'),
   manager:       buildRow('Full'),
-  administrator: { ...buildRow('View'), 'Residents': 'View+Edit', 'Import Data': 'None', 'User Management': 'None' },
-  staff:         { ...buildRow('View'), 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None' },
+  administrator: { ...buildRow('View'), 'Residents': 'View+Edit', 'Import Data': 'None', 'User Management': 'None', 'Custom Reports': 'None' },
+  staff:         { ...buildRow('View'), 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None', 'Custom Reports': 'None' },
   maintenance:   {
     ...buildRow('View'),
     'Maintenance': 'View+Edit',
-    'Landlords': 'None', 'Payments': 'None', 'Reports': 'None',
+    'Landlords': 'None', 'Payments': 'None', 'Reports': 'None', 'Custom Reports': 'None',
     'Companies': 'None', 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None',
   },
   resident:      buildRow('None'),
