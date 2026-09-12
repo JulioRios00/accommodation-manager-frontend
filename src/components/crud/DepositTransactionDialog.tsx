@@ -5,7 +5,7 @@ import { DepositTransaction, Property, Resident, Bed, getProperties, getResident
 import { bedCode } from '@/lib/bedCode';
 
 type FormState = Omit<DepositTransaction, 'id'>;
-const empty: FormState = { type: 'receipt', residentId: '', bookingId: null, propertyId: '', bedId: null, residentName: '', checkoutDate: null, depositAmount: 0, proRataRentAmount: null, iban: null, payeeAddress: null, status: 'pending', dateProcessed: null, bankReference: null, company: null, comments: null };
+const empty: FormState = { type: 'receipt', residentId: '', bookingId: null, propertyId: '', bedId: null, residentName: '', checkoutDate: null, depositAmount: 0, proRataRentAmount: null, iban: null, payeeAddress: null, status: 'pending', dateProcessed: null, bankReference: null, company: null, comments: null, refundDueDate: null, completedBy: null, completedByName: null };
 
 interface Props { open: boolean; initial?: DepositTransaction | null; onClose: () => void; onSave: (data: FormState, id?: string) => Promise<void>; }
 
