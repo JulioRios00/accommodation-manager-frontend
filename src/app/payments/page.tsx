@@ -22,6 +22,7 @@ import DepositTransactionDialog from '@/components/crud/DepositTransactionDialog
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { bedCode } from '@/lib/bedCode';
 import { useRole } from '@/hooks/useRole';
+import { useFeatureFlags } from '@/lib/FeatureFlagsProvider';
 
 const statusChip = (v: string) => {
   const color = v === 'paid' || v === 'done' ? 'success' : v === 'partial' || v === 'partially_paid' ? 'warning' : 'default';
@@ -37,6 +38,8 @@ const MONTHS = [
 
 export default function PaymentsPage() {
   const { can } = useRole();
+  const { isEnabled } = useFeatureFlags();
+  const receivablesLedgerEnabled = isEnabled('receivables_ledger');
   const [tab, setTab] = useState(0);
   const [rentPayments, setRentPayments] = useState<RentPayment[]>([]);
   const [landlordPayments, setLandlordPayments] = useState<LandlordPayment[]>([]);
@@ -266,12 +269,12 @@ export default function PaymentsPage() {
         <Tab label="Rent Payments" />
         <Tab label="Landlord Payments" />
         <Tab label="Deposits" />
-        <Tab label="Receivables Ledger" />
+        {receivablesLedgerEnabled && <Tab label="Receivables Ledger" />}
       </Tabs>
       {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
-      {tab === 3 && <DataGrid rows={ledger} columns={ledgerColumns} getRowId={r => r.paymentId} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 3 && receivablesLedgerEnabled && <DataGrid rows={ledger} columns={ledgerColumns} getRowId={r => r.paymentId} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 0 && <RentPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateRentPayment(id, data); else await createRentPayment(data); await load(); }} />}
       {tab === 1 && <LandlordPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateLandlordPayment(id, data); else await createLandlordPayment(data); await load(); }} />}
       {tab === 2 && <DepositTransactionDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateDepositTransaction(id, data); else await createDepositTransaction(data); await load(); }} />}

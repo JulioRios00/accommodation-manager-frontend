@@ -655,6 +655,20 @@ export const updateRolePermissions = (matrix: PermissionMatrix) =>
 export const resetRolePermissions = () =>
   api.delete<PermissionMatrix>('/role-permissions').then(r => r.data);
 
+// Feature flags — kill switches for UC-501/UC-502, readable by any signed-in user (the
+// frontend gates its own nav/tabs on this), toggleable by sysadmin/manager only.
+export type FeatureFlagKey = 'receivables_ledger' | 'overdue_escalation' | 'landlord_disbursements';
+export interface FeatureFlag {
+  key: FeatureFlagKey;
+  label: string;
+  description: string;
+  enabled: boolean;
+  updatedAt: string | null;
+}
+export const getFeatureFlags = () => api.get<FeatureFlag[]>('/feature-flags').then(r => r.data);
+export const setFeatureFlag = (key: FeatureFlagKey, enabled: boolean) =>
+  api.put<FeatureFlag>(`/feature-flags/${key}`, { enabled }).then(r => r.data);
+
 // Activity Log
 export interface AuditFieldChange {
   field: string;
