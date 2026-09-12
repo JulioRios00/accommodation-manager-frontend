@@ -5,12 +5,14 @@ import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
   getRentPayments, createRentPayment, updateRentPayment, deleteRentPayment, RentPayment,
   getLandlordPayments, createLandlordPayment, updateLandlordPayment, deleteLandlordPayment, LandlordPayment,
   getDepositTransactions, createDepositTransaction, updateDepositTransaction, deleteDepositTransaction, DepositTransaction,
+  getReceivablesLedger, markRentPaymentReceived, ReceivablesLedgerRow,
   getProperties, getResidents, getBeds, getLandlords, getBookings,
   Property, Resident, Bed, Landlord, Booking,
 } from '@/services/api';
@@ -39,6 +41,8 @@ export default function PaymentsPage() {
   const [rentPayments, setRentPayments] = useState<RentPayment[]>([]);
   const [landlordPayments, setLandlordPayments] = useState<LandlordPayment[]>([]);
   const [deposits, setDeposits] = useState<DepositTransaction[]>([]);
+  const [ledger, setLedger] = useState<ReceivablesLedgerRow[]>([]);
+  const [markReceivedId, setMarkReceivedId] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
@@ -65,12 +69,20 @@ export default function PaymentsPage() {
     getRentPayments().then(setRentPayments).catch(() => {});
     getLandlordPayments().then(setLandlordPayments).catch(() => {});
     getDepositTransactions().then(setDeposits).catch(() => {});
+    getReceivablesLedger().then(setLedger).catch(() => {});
     loadReferenceData();
   }, []);
 
   const load = async () => {
-    const [r, l, d] = await Promise.all([getRentPayments(), getLandlordPayments(), getDepositTransactions()]);
-    setRentPayments(r); setLandlordPayments(l); setDeposits(d);
+    const [r, l, d, led] = await Promise.all([getRentPayments(), getLandlordPayments(), getDepositTransactions(), getReceivablesLedger()]);
+    setRentPayments(r); setLandlordPayments(l); setDeposits(d); setLedger(led);
+  };
+
+  const handleMarkReceived = async () => {
+    if (!markReceivedId) return;
+    await markRentPaymentReceived(markReceivedId);
+    setMarkReceivedId(null);
+    await load();
   };
 
   const propertyById = useMemo(() => new Map(properties.map(p => [p.id, p])), [properties]);
@@ -137,6 +149,40 @@ export default function PaymentsPage() {
         {can('payment:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
         {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
       </Box> },
+  ];
+
+  const ledgerColumns: GridColDef[] = [
+    { field: 'month', headerName: 'Month', width: 90 },
+    { field: 'propertyCode', headerName: 'Property', width: 100 },
+    { field: 'residentName', headerName: 'Resident', minWidth: 160, flex: 1 },
+    { field: 'amountDue', headerName: 'Amount Due (€)', width: 130, type: 'number' },
+    { field: 'dueDate', headerName: 'Due Date', width: 110 },
+    {
+      field: 'daysOverdue', headerName: 'Days Overdue', width: 120, type: 'number',
+      renderCell: (p) => {
+        const v = p.value as number;
+        if (v <= 0) return null;
+        return <Chip label={v} size="small" color={v >= 4 ? 'error' : 'warning'} />;
+      },
+    },
+    {
+      field: 'escalation', headerName: 'Escalation Status', minWidth: 200, flex: 1,
+      valueGetter: (_v, row) => {
+        const r = row as ReceivablesLedgerRow;
+        if (r.d4NoticeSentAt) return `D+4 notice sent ${new Date(r.d4NoticeSentAt).toLocaleDateString()}`;
+        if (r.d1ReminderSentAt) return `D+1 reminder sent ${new Date(r.d1ReminderSentAt).toLocaleDateString()}`;
+        return '—';
+      },
+    },
+    {
+      field: 'actions', headerName: '', width: 160, sortable: false,
+      renderCell: (params) => (
+        can('payment:edit') &&
+        <Button size="small" startIcon={<CheckCircleIcon />} onClick={() => setMarkReceivedId((params.row as ReceivablesLedgerRow).paymentId)}>
+          Mark Received
+        </Button>
+      ),
+    },
   ];
 
   const depositColumns: GridColDef[] = [
@@ -214,20 +260,27 @@ export default function PaymentsPage() {
         )}
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
-        {can('payment:edit') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
+        {tab !== 3 && can('payment:edit') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
       </Box>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
         <Tab label="Rent Payments" />
         <Tab label="Landlord Payments" />
         <Tab label="Deposits" />
+        <Tab label="Receivables Ledger" />
       </Tabs>
       {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 3 && <DataGrid rows={ledger} columns={ledgerColumns} getRowId={r => r.paymentId} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 0 && <RentPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateRentPayment(id, data); else await createRentPayment(data); await load(); }} />}
       {tab === 1 && <LandlordPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateLandlordPayment(id, data); else await createLandlordPayment(data); await load(); }} />}
       {tab === 2 && <DepositTransactionDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateDepositTransaction(id, data); else await createDepositTransaction(data); await load(); }} />}
       <ConfirmDialog open={!!deleteId} title="Delete Payment" message="This action cannot be undone." onConfirm={handleDelete} onCancel={() => setDeleteId(null)} />
+      <ConfirmDialog
+        open={!!markReceivedId} title="Mark as Received"
+        message="Confirm this rent charge has been received via bank reconciliation? This will stop further overdue reminder emails for it."
+        onConfirm={handleMarkReceived} onCancel={() => setMarkReceivedId(null)}
+      />
     </Box>
   );
 }

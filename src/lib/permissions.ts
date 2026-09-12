@@ -11,6 +11,7 @@ export const ACCESS_LEVELS: AccessLevel[] = ['Full', 'View+Edit', 'View', 'None'
 export const SECTIONS = [
   'Dashboard', 'Properties', 'Beds', 'Residents', 'Bookings', 'Landlords',
   'Service Providers', 'Maintenance', 'Key Log', 'Payments', 'Reports', 'Custom Reports',
+  'Communication Settings', 'Landlord Disbursements',
   'Companies', 'Import Data', 'User Management', 'Activity Log',
 ] as const;
 
@@ -36,6 +37,8 @@ const SECTION_BY_KEY = {
   payment: 'Payments',
   report: 'Reports',
   customReport: 'Custom Reports',
+  communicationSettings: 'Communication Settings',
+  landlordDisbursement: 'Landlord Disbursements',
   company: 'Companies',
   import: 'Import Data',
   user: 'User Management',
@@ -63,12 +66,13 @@ const VERB_MINIMUM: Record<Verb, AccessLevel> = {
 export const DEFAULT_MATRIX: Record<UserRole, Record<Section, AccessLevel>> = {
   sysadmin:      buildRow('Full'),
   manager:       buildRow('Full'),
-  administrator: { ...buildRow('View'), 'Residents': 'View+Edit', 'Import Data': 'None', 'User Management': 'None', 'Custom Reports': 'None' },
-  staff:         { ...buildRow('View'), 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None', 'Custom Reports': 'None' },
+  administrator: { ...buildRow('View'), 'Residents': 'View+Edit', 'Import Data': 'None', 'User Management': 'None', 'Custom Reports': 'None', 'Communication Settings': 'None', 'Landlord Disbursements': 'None' },
+  staff:         { ...buildRow('View'), 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None', 'Custom Reports': 'None', 'Communication Settings': 'None', 'Landlord Disbursements': 'None' },
   maintenance:   {
     ...buildRow('View'),
     'Maintenance': 'View+Edit',
     'Landlords': 'None', 'Payments': 'None', 'Reports': 'None', 'Custom Reports': 'None',
+    'Communication Settings': 'None', 'Landlord Disbursements': 'None',
     'Companies': 'None', 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None',
   },
   resident:      buildRow('None'),

@@ -490,12 +490,68 @@ export const deleteRentPayment = (id: string) => api.delete(`/rent-payments/${id
 export const addRentInstallment = (rentPaymentId: string, data: { amount: number; paidAt: string; notes?: string | null }) =>
   api.post(`/rent-payments/${rentPaymentId}/installments`, data).then(r => r.data);
 
+// UC-501: Receivables ledger + escalation
+export interface ReceivablesLedgerRow {
+  paymentId: string;
+  bookingId: string | null;
+  month: string;
+  residentId: string;
+  residentName: string;
+  residentEmail: string | null;
+  propertyCode: string;
+  rentAmount: number;
+  amountPaid: number;
+  amountDue: number;
+  dueDate: string;
+  daysOverdue: number;
+  lateStatus: string;
+  d1ReminderSentAt: string | null;
+  d4NoticeSentAt: string | null;
+}
+export const getReceivablesLedger = () => api.get<ReceivablesLedgerRow[]>('/rent-payments/ledger').then(r => r.data);
+export const markRentPaymentReceived = (id: string) => api.post<RentPayment>(`/rent-payments/${id}/mark-received`).then(r => r.data);
+
+export type EmailTemplateKey = 'd1_reminder' | 'd4_urgent';
+export interface EmailTemplate { key: EmailTemplateKey; subject: string; body: string; updatedAt: string }
+export const EMAIL_TEMPLATE_VARIABLES = ['residentName', 'amountDue', 'dueDate', 'daysOverdue'] as const;
+export const getEmailTemplate = (key: EmailTemplateKey) => api.get<EmailTemplate>(`/email-templates/${key}`).then(r => r.data);
+export const saveEmailTemplate = (key: EmailTemplateKey, data: { subject: string; body: string }) =>
+  api.put<EmailTemplate>(`/email-templates/${key}`, data).then(r => r.data);
+
 // Landlord Payments
 export const getLandlordPayments = (params?: { propertyId?: string; landlordId?: string; month?: string }) =>
   api.get<LandlordPayment[]>('/landlord-payments', { params }).then(r => r.data);
 export const createLandlordPayment = (data: Omit<LandlordPayment, 'id'>) => api.post<LandlordPayment>('/landlord-payments', data).then(r => r.data);
 export const updateLandlordPayment = (id: string, data: Partial<LandlordPayment>) => api.put<LandlordPayment>(`/landlord-payments/${id}`, data).then(r => r.data);
 export const deleteLandlordPayment = (id: string) => api.delete(`/landlord-payments/${id}`);
+
+// UC-502: Landlord disbursement ledger
+export interface DisbursementLedgerRow {
+  paymentId: string;
+  propertyId: string;
+  propertyCode: string;
+  month: string;
+  dateDue: string | null;
+  datePaid: string | null;
+  netAmount: number;
+  beneficiaryName: string | null;
+  iban: string | null;
+  bic: string | null;
+  paymentDescription: string;
+  notes: string | null;
+  status: string;
+}
+export const getDisbursementLedger = () => api.get<DisbursementLedgerRow[]>('/landlord-payments/ledger').then(r => r.data);
+export const updateDisbursementNotes = (id: string, notes: string | null) =>
+  api.put<LandlordPayment>(`/landlord-payments/${id}/notes`, { notes }).then(r => r.data);
+export const markLandlordPaymentPaid = (id: string) => api.post<LandlordPayment>(`/landlord-payments/${id}/mark-paid`).then(r => r.data);
+export const exportLandlordDisbursements = (ids: string[]) =>
+  api.post('/landlord-payments/export', { ids }, { responseType: 'blob' }).then(r => {
+    const url = URL.createObjectURL(r.data);
+    const a = document.createElement('a');
+    a.href = url; a.download = `landlord-disbursements-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  });
 
 // Deposit Transactions
 export const getDepositTransactions = (params?: { propertyId?: string; type?: string; status?: string }) =>

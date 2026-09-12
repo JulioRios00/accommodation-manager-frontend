@@ -30,6 +30,8 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import BuildIcon from '@mui/icons-material/Build';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import ForumIcon from '@mui/icons-material/Forum';
 import BusinessIcon from '@mui/icons-material/Business';
 import UploadIcon from '@mui/icons-material/Upload';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
@@ -58,6 +60,8 @@ const ALL_NAV_ITEMS: { label: string; href: string; icon: React.ReactNode; secti
   { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon />,    section: 'Payments' },
   { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon />,  section: 'Reports' },
   { label: 'Custom Reports',    href: '/reports/custom',    icon: <BuildIcon />,       section: 'Custom Reports' },
+  { label: 'Landlord Disbursements', href: '/landlord-disbursements', icon: <AccountBalanceIcon />, section: 'Landlord Disbursements' },
+  { label: 'Communication Settings', href: '/communication-settings', icon: <ForumIcon />, section: 'Communication Settings' },
   { label: 'Business Units',    href: '/companies',         icon: <BusinessIcon />,    section: 'Companies' },
   { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      section: 'Import Data' },
   { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   section: 'User Management' },
