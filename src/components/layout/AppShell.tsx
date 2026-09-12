@@ -36,18 +36,21 @@ import BusinessIcon from '@mui/icons-material/Business';
 import UploadIcon from '@mui/icons-material/Upload';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import HistoryIcon from '@mui/icons-material/History';
+import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import appTheme from '@/theme';
 import { useRole } from '@/hooks/useRole';
 import { PermissionsProvider } from '@/lib/PermissionsProvider';
+import { FeatureFlagsProvider, useFeatureFlags } from '@/lib/FeatureFlagsProvider';
 import type { Section } from '@/lib/permissions';
+import type { FeatureFlagKey } from '@/services/api';
 
 const DRAWER_WIDTH = 220;
 const SIDEBAR_BG = '#424242';
 
-const ALL_NAV_ITEMS: { label: string; href: string; icon: React.ReactNode; section: Section }[] = [
+const ALL_NAV_ITEMS: { label: string; href: string; icon: React.ReactNode; section: Section; featureFlag?: FeatureFlagKey }[] = [
   { label: 'Dashboard',         href: '/dashboard',         icon: <DashboardIcon />,   section: 'Dashboard' },
   { label: 'Properties',        href: '/properties',        icon: <ApartmentIcon />,   section: 'Properties' },
   { label: 'Beds',              href: '/beds',              icon: <BedIcon />,         section: 'Beds' },
@@ -60,18 +63,22 @@ const ALL_NAV_ITEMS: { label: string; href: string; icon: React.ReactNode; secti
   { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon />,    section: 'Payments' },
   { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon />,  section: 'Reports' },
   { label: 'Custom Reports',    href: '/reports/custom',    icon: <BuildIcon />,       section: 'Custom Reports' },
-  { label: 'Landlord Disbursements', href: '/landlord-disbursements', icon: <AccountBalanceIcon />, section: 'Landlord Disbursements' },
-  { label: 'Communication Settings', href: '/communication-settings', icon: <ForumIcon />, section: 'Communication Settings' },
+  { label: 'Landlord Disbursements', href: '/landlord-disbursements', icon: <AccountBalanceIcon />, section: 'Landlord Disbursements', featureFlag: 'landlord_disbursements' },
+  { label: 'Communication Settings', href: '/communication-settings', icon: <ForumIcon />, section: 'Communication Settings', featureFlag: 'overdue_escalation' },
   { label: 'Business Units',    href: '/companies',         icon: <BusinessIcon />,    section: 'Companies' },
   { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      section: 'Import Data' },
   { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   section: 'User Management' },
+  { label: 'Feature Flags',     href: '/feature-flags',     icon: <ToggleOnIcon />,    section: 'User Management' },
   { label: 'Activity Log',      href: '/activity-log',      icon: <HistoryIcon />,     section: 'Activity Log' },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { level } = useRole();
-  const navItems = ALL_NAV_ITEMS.filter(item => level(item.section) !== 'None');
+  const { isEnabled } = useFeatureFlags();
+  const navItems = ALL_NAV_ITEMS.filter(item =>
+    level(item.section) !== 'None' && (!item.featureFlag || isEnabled(item.featureFlag)),
+  );
   return (
     <>
       <Box sx={{ p: 2.5, pb: 1.5 }}>
@@ -214,7 +221,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <ThemeProvider theme={appTheme}>
       <CssBaseline />
       <PermissionsProvider>
-        <Shell>{children}</Shell>
+        <FeatureFlagsProvider>
+          <Shell>{children}</Shell>
+        </FeatureFlagsProvider>
       </PermissionsProvider>
     </ThemeProvider>
   );
