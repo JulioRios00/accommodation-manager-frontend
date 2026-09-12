@@ -9,12 +9,15 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getAuditLogs, getUsers, AuditLog, ClerkUser } from '@/services/api';
 
-const ENTITY_TYPES = ['Booking', 'Resident', 'Property', 'Bed', 'RentPayment'];
+const ENTITY_TYPES = ['Booking', 'Resident', 'Property', 'Bed', 'RentPayment', 'LandlordPayment', 'CustomReport'];
 
 const ACTION_COLOR: Record<string, 'success' | 'info' | 'error'> = {
   create: 'success',
   update: 'info',
   delete: 'error',
+  export: 'info',
+  email_sent: 'success',
+  email_fail: 'error',
 };
 
 function formatValue(v: unknown): string {
