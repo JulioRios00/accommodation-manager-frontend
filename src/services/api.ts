@@ -272,6 +272,9 @@ export interface DepositTransaction {
   bankReference: string | null;
   company: string | null;
   comments: string | null;
+  refundDueDate: string | null;
+  completedBy: string | null;
+  completedByName: string | null;
 }
 
 export interface Company {
@@ -478,7 +481,22 @@ export const updateKeyLog = (id: string, data: Partial<KeyLog>) => api.put<KeyLo
 export const deleteKeyLog = (id: string) => api.delete(`/key-logs/${id}`);
 
 // Checkout
-export const checkout = (data: { bookingId: string; checkoutDate: string; keysReturned?: boolean; inspectionNotes?: string | null; depositRefundAmount?: number | null; refundIban?: string | null; proRataRentAmount?: number | null; newResidentLinked?: boolean; newResidentId?: string | null; notes?: string | null; residentName?: string; propertyId?: string; residentId?: string; bedId?: string | null; company?: string | null }) =>
+export const ROOM_CONDITION_CATEGORIES = [
+  'Cleanliness', 'Walls & Paint', 'Furniture', 'Appliances', 'Keys Returned', 'Damages',
+] as const;
+export type RoomConditionRating = 'good' | 'fair' | 'damaged';
+export interface RoomConditionChecklistItem {
+  category: string;
+  condition: RoomConditionRating;
+  notes: string | null;
+}
+export const checkout = (data: {
+  bookingId: string; checkoutDate: string; keysReturned?: boolean; inspectionNotes?: string | null;
+  roomConditionChecklist?: RoomConditionChecklistItem[] | null;
+  depositRefundAmount?: number | null; refundIban?: string | null; proRataRentAmount?: number | null;
+  newResidentLinked?: boolean; newResidentId?: string | null; notes?: string | null; residentName?: string;
+  propertyId?: string; residentId?: string; bedId?: string | null; company?: string | null;
+}) =>
   api.post('/checkout', data).then(r => r.data);
 
 // Rent Payments
@@ -560,6 +578,22 @@ export const createDepositTransaction = (data: Omit<DepositTransaction, 'id'>) =
 export const updateDepositTransaction = (id: string, data: Partial<DepositTransaction>) => api.put<DepositTransaction>(`/deposit-transactions/${id}`, data).then(r => r.data);
 export const deleteDepositTransaction = (id: string) => api.delete(`/deposit-transactions/${id}`);
 
+// UC-601: Deposit refund queue
+export interface DepositRefundQueueRow {
+  depositTransactionId: string;
+  residentId: string;
+  residentName: string;
+  propertyCode: string;
+  bedNumber: number | null;
+  depositAmount: number;
+  checkoutDate: string | null;
+  refundDueDate: string | null;
+  businessDaysRemaining: number | null;
+  iban: string | null;
+}
+export const getDepositRefundQueue = () => api.get<DepositRefundQueueRow[]>('/deposit-transactions/refund-queue').then(r => r.data);
+export const completeDepositRefund = (id: string) => api.post<DepositTransaction>(`/deposit-transactions/${id}/complete-refund`).then(r => r.data);
+
 export type SpaceCategory =
   | 'bedroom' | 'kitchen' | 'bathroom' | 'living_room' | 'dining_room'
   | 'garden' | 'storage' | 'office' | 'utility' | 'other';
@@ -633,6 +667,19 @@ export interface PortalProfile {
 export const getPortalProfile = () => api.get<PortalProfile>('/portal/me').then(r => r.data);
 export const submitResidentTicket = (data: { category: string; title: string; description?: string | null }) =>
   api.post<MaintenanceTicket>('/portal/tickets', data).then(r => r.data);
+
+// UC-601: Resident portal notifications (in-app alerts, fetch-on-load — no live push)
+export interface PortalNotification {
+  id: string;
+  residentId: string;
+  type: string;
+  title: string;
+  message: string;
+  readAt: string | null;
+  createdAt: string;
+}
+export const getMyNotifications = () => api.get<PortalNotification[]>('/portal/notifications').then(r => r.data);
+export const markNotificationRead = (id: string) => api.put<PortalNotification>(`/portal/notifications/${id}/read`).then(r => r.data);
 
 // User Management
 export interface ClerkUser {

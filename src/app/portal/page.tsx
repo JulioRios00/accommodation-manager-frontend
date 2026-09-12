@@ -1,11 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
 import {
-  Alert, Box, Button, Card, CardContent, Chip, CircularProgress,
+  Alert, Badge, Box, Button, Card, CardContent, Chip, CircularProgress,
   MenuItem, TextField, Typography,
 } from '@mui/material';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
-import { getPortalProfile, submitResidentTicket, PortalProfile } from '@/services/api';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import {
+  getPortalProfile, submitResidentTicket, PortalProfile,
+  getMyNotifications, markNotificationRead, PortalNotification,
+} from '@/services/api';
 
 const CATEGORIES = [
   { value: 'plumbing',   label: 'Plumbing' },
@@ -27,12 +31,27 @@ export default function PortalPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const [notifications, setNotifications] = useState<PortalNotification[]>([]);
+
   useEffect(() => {
     getPortalProfile()
       .then(setProfile)
       .catch(() => setError('Unable to load your profile. Please contact your housing manager.'))
       .finally(() => setLoading(false));
+    getMyNotifications().then(setNotifications).catch(() => {});
   }, []);
+
+  const handleNotificationTap = async (n: PortalNotification) => {
+    if (n.readAt) return;
+    setNotifications((list) => list.map((it) => (it.id === n.id ? { ...it, readAt: new Date().toISOString() } : it)));
+    try {
+      await markNotificationRead(n.id);
+    } catch {
+      // Best-effort — leave it marked read locally even if the request fails.
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   const handleSubmit = async () => {
     if (!form.title.trim()) return;
@@ -107,6 +126,39 @@ export default function PortalPage() {
         <Alert severity="warning" sx={{ mb: 3 }}>
           No active licence agreement found. Contact your housing manager.
         </Alert>
+      )}
+
+      {/* Notifications */}
+      {notifications.length > 0 && (
+        <Card variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+              <Badge badgeContent={unreadCount} color="primary">
+                <NotificationsIcon fontSize="small" color="action" />
+              </Badge>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Notifications</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {notifications.map((n) => (
+                <Box
+                  key={n.id}
+                  onClick={() => handleNotificationTap(n)}
+                  sx={{
+                    p: 1.5, borderRadius: 1.5, cursor: n.readAt ? 'default' : 'pointer',
+                    bgcolor: n.readAt ? 'transparent' : '#FFF0E6',
+                    border: '1px solid', borderColor: n.readAt ? 'divider' : '#FDEEDE',
+                  }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: n.readAt ? 400 : 600 }}>{n.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">{n.message}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(n.createdAt).toLocaleDateString('en-GB')}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
       )}
 
       {/* Success banner */}

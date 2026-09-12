@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Typography, Box, Button, Chip, IconButton, ToggleButton, ToggleButtonGroup, TextField, InputAdornment, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -7,6 +8,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import RestoreIcon from '@mui/icons-material/Restore';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { DataGrid, GridColDef, GridColumnVisibilityModel } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
@@ -36,6 +38,7 @@ const statusColor = (s: string) =>
   s === 'active' ? 'success' : s === 'upcoming' ? 'warning' : 'default';
 
 export default function BookingsPage() {
+  const router = useRouter();
   const { can } = useRole();
   const canEdit = can('booking:edit');
   const canManage = can('booking:write');
@@ -145,10 +148,17 @@ export default function BookingsPage() {
     {
       field: 'actions',
       headerName: '',
-      width: 90,
+      width: 130,
       sortable: false,
       renderCell: (params) => (
         <Box onClick={e => e.stopPropagation()}>
+          {canEdit && (params.row as any)._raw.status === 'active' && (
+            <Tooltip title="Check out">
+              <IconButton size="small" onClick={() => router.push(`/checkout/${params.row.id}`)}>
+                <LogoutIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           {canEdit ? (
             <Tooltip title="Edit booking">
               <IconButton size="small" onClick={() => openBooking((params.row as any)._raw)}>

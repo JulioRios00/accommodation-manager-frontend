@@ -13,6 +13,7 @@ import {
   getLandlordPayments, createLandlordPayment, updateLandlordPayment, deleteLandlordPayment, LandlordPayment,
   getDepositTransactions, createDepositTransaction, updateDepositTransaction, deleteDepositTransaction, DepositTransaction,
   getReceivablesLedger, markRentPaymentReceived, ReceivablesLedgerRow,
+  getDepositRefundQueue, completeDepositRefund, DepositRefundQueueRow,
   getProperties, getResidents, getBeds, getLandlords, getBookings,
   Property, Resident, Bed, Landlord, Booking,
 } from '@/services/api';
@@ -45,7 +46,9 @@ export default function PaymentsPage() {
   const [landlordPayments, setLandlordPayments] = useState<LandlordPayment[]>([]);
   const [deposits, setDeposits] = useState<DepositTransaction[]>([]);
   const [ledger, setLedger] = useState<ReceivablesLedgerRow[]>([]);
+  const [refundQueue, setRefundQueue] = useState<DepositRefundQueueRow[]>([]);
   const [markReceivedId, setMarkReceivedId] = useState<string | null>(null);
+  const [markRefundCompleteId, setMarkRefundCompleteId] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
@@ -73,12 +76,15 @@ export default function PaymentsPage() {
     getLandlordPayments().then(setLandlordPayments).catch(() => {});
     getDepositTransactions().then(setDeposits).catch(() => {});
     getReceivablesLedger().then(setLedger).catch(() => {});
+    getDepositRefundQueue().then(setRefundQueue).catch(() => {});
     loadReferenceData();
   }, []);
 
   const load = async () => {
-    const [r, l, d, led] = await Promise.all([getRentPayments(), getLandlordPayments(), getDepositTransactions(), getReceivablesLedger()]);
-    setRentPayments(r); setLandlordPayments(l); setDeposits(d); setLedger(led);
+    const [r, l, d, led, rq] = await Promise.all([
+      getRentPayments(), getLandlordPayments(), getDepositTransactions(), getReceivablesLedger(), getDepositRefundQueue(),
+    ]);
+    setRentPayments(r); setLandlordPayments(l); setDeposits(d); setLedger(led); setRefundQueue(rq);
   };
 
   const handleMarkReceived = async () => {
@@ -88,11 +94,19 @@ export default function PaymentsPage() {
     await load();
   };
 
+  const handleMarkRefundComplete = async () => {
+    if (!markRefundCompleteId) return;
+    await completeDepositRefund(markRefundCompleteId);
+    setMarkRefundCompleteId(null);
+    await load();
+  };
+
   const propertyById = useMemo(() => new Map(properties.map(p => [p.id, p])), [properties]);
   const residentById = useMemo(() => new Map(residents.map(r => [r.id, r])), [residents]);
   const bedById = useMemo(() => new Map(beds.map(b => [b.id, b])), [beds]);
   const landlordById = useMemo(() => new Map(landlords.map(l => [l.id, l])), [landlords]);
   const bookingById = useMemo(() => new Map(bookings.map(b => [b.id, b])), [bookings]);
+  const refundQueueById = useMemo(() => new Map(refundQueue.map(q => [q.depositTransactionId, q])), [refundQueue]);
 
   const bedCodeForBed = (bed?: Bed) => bedCode(bed);
   const bedCodeForBooking = (bookingId?: string | null) => {
@@ -203,14 +217,36 @@ export default function PaymentsPage() {
     { field: 'proRataRentAmount', headerName: 'Pro Rata Rent (€)', width: 140, type: 'number' },
     { field: 'iban', headerName: 'IBAN', width: 180 },
     { field: 'checkoutDate', headerName: 'Checkout Date', width: 120 },
+    {
+      field: 'refundDueDate', headerName: 'Refund Due', width: 150,
+      renderCell: (params) => {
+        const row = params.row as DepositTransaction;
+        if (row.type !== 'refund' || row.status !== 'pending' || !row.refundDueDate) return null;
+        const days = refundQueueById.get(row.id)?.businessDaysRemaining;
+        const color = days == null ? 'default' : days < 0 ? 'error' : days <= 1 ? 'warning' : 'success';
+        const label = days == null
+          ? row.refundDueDate
+          : days < 0 ? `${row.refundDueDate} · overdue` : days === 0 ? `${row.refundDueDate} · due today` : `${row.refundDueDate} · ${days}d left`;
+        return <Chip label={label} color={color as any} size="small" />;
+      },
+    },
     { field: 'comments', headerName: 'Comments', minWidth: 160, flex: 1 },
     { field: 'status', headerName: 'Status', width: 100, renderCell: (p) => statusChip(p.value as string) },
     { field: 'dateProcessed', headerName: 'Processed', width: 120 },
-    { field: 'actions', headerName: '', width: 90, sortable: false,
-      renderCell: (params) => <Box>
-        {can('payment:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
-        {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
-      </Box> },
+    { field: 'actions', headerName: '', width: 190, sortable: false,
+      renderCell: (params) => {
+        const row = params.row as DepositTransaction;
+        const isPendingRefund = row.type === 'refund' && row.status === 'pending';
+        return <Box>
+          {isPendingRefund && can('payment:edit') && (
+            <Button size="small" startIcon={<CheckCircleIcon />} onClick={() => setMarkRefundCompleteId(row.id)}>
+              Mark Complete
+            </Button>
+          )}
+          {can('payment:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
+          {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
+        </Box>;
+      } },
   ];
 
   const q = search.toLowerCase();
@@ -283,6 +319,11 @@ export default function PaymentsPage() {
         open={!!markReceivedId} title="Mark as Received"
         message="Confirm this rent charge has been received via bank reconciliation? This will stop further overdue reminder emails for it."
         onConfirm={handleMarkReceived} onCancel={() => setMarkReceivedId(null)}
+      />
+      <ConfirmDialog
+        open={!!markRefundCompleteId} title="Mark Refund Complete"
+        message="Confirm this deposit refund has been paid out to the resident? This will email the resident and cannot be undone."
+        onConfirm={handleMarkRefundComplete} onCancel={() => setMarkRefundCompleteId(null)}
       />
     </Box>
   );
