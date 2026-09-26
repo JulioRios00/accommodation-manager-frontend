@@ -21,7 +21,7 @@ export default function LandlordsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Landlord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('landlords_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('landlords_col_visibility');
 
   const load = () => getLandlords().then(setLandlords).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -64,7 +64,10 @@ export default function LandlordsPage() {
     },
   ];
 
-  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+  const columnsWithWidthsAndOrder = useMemo(() => {
+    const withWidths = applyColumnWidths(columns);
+    return applyColumnOrder(withWidths);
+  }, [columns, applyColumnWidths, applyColumnOrder]);
 
   const q = search.toLowerCase();
   const filtered = landlords.filter(l => [l.name, l.email].some(v => v?.toLowerCase().includes(q)));
@@ -82,7 +85,7 @@ export default function LandlordsPage() {
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>
         )}
       </Box>
-      <DataGrid rows={filtered} columns={columnsWithWidths} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
+      <DataGrid rows={filtered} columns={columnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
         pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
         columnVisibilityModel={columnVisibility} onColumnVisibilityModelChange={handleColumnVisibilityChange}
         slots={{ footer: CustomGridFooter }}

@@ -22,7 +22,7 @@ export default function KeyLogsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<KeyLog | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('keyLogs_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('keyLogs_col_visibility');
 
   const load = () => getKeyLogs().then(setItems).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -46,7 +46,10 @@ export default function KeyLogsPage() {
     },
   ];
 
-  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+  const columnsWithWidthsAndOrder = useMemo(() => {
+    const withWidths = applyColumnWidths(columns);
+    return applyColumnOrder(withWidths);
+  }, [columns, applyColumnWidths, applyColumnOrder]);
 
   const q = search.toLowerCase();
   const filtered = items.filter(i =>
@@ -68,7 +71,7 @@ export default function KeyLogsPage() {
         </Tooltip>
         {can('keyLog:edit') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Log Key</Button>}
       </Box>
-      <DataGrid rows={filtered} columns={columnsWithWidths} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
+      <DataGrid rows={filtered} columns={columnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
         pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
         columnVisibilityModel={columnVisibility} onColumnVisibilityModelChange={handleColumnVisibilityChange}
         slots={{ footer: CustomGridFooter }}

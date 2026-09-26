@@ -105,7 +105,7 @@ export default function MaintenancePage() {
   const canManage = can('maintenance:write');
   const canView = can('maintenance:view');
   const [tab, setTab] = useState(0);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('maintenance_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('maintenance_col_visibility');
 
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [search, setSearch] = useState('');
@@ -281,7 +281,10 @@ export default function MaintenancePage() {
     },
   ];
 
-  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+  const columnsWithWidthsAndOrder = useMemo(() => {
+    const withWidths = applyColumnWidths(columns);
+    return applyColumnOrder(withWidths);
+  }, [columns, applyColumnWidths, applyColumnOrder]);
 
   const q = search.toLowerCase();
   const filtered = tickets.filter(t =>
@@ -331,7 +334,7 @@ export default function MaintenancePage() {
             </Tooltip>
           </Box>
           <DataGrid
-            rows={filtered} columns={columnsWithWidths} getRowId={r => r.id}
+            rows={filtered} columns={columnsWithWidthsAndOrder} getRowId={r => r.id}
             autoHeight disableRowSelectionOnClick
             onRowDoubleClick={params => openDetail(params.row as MaintenanceTicket)}
             pageSizeOptions={[25, 50]}

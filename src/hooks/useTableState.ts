@@ -48,8 +48,9 @@ export function useTableState(storageKey: string) {
   );
 
   const handleColumnOrderChange = useCallback(
-    (model: string[]) => {
-      saveState({ columnOrder: model });
+    (params: any) => {
+      const order = params?.model || [];
+      saveState({ columnOrder: order });
     },
     [saveState]
   );
@@ -70,6 +71,31 @@ export function useTableState(storageKey: string) {
       return persistedWidth ? { ...col, width: persistedWidth } : col;
     });
   }, [state.columnWidths]);
+
+  // Apply persisted column order to column definitions
+  const applyColumnOrder = useCallback((columns: GridColDef[]) => {
+    if (!state.columnOrder || state.columnOrder.length === 0) {
+      return columns;
+    }
+    const ordered: GridColDef[] = [];
+    const fieldToCol = new Map(columns.map(col => [col.field, col]));
+
+    // First add columns in the stored order
+    for (const field of state.columnOrder) {
+      const col = fieldToCol.get(field);
+      if (col) {
+        ordered.push(col);
+        fieldToCol.delete(field);
+      }
+    }
+
+    // Then append any columns not in the stored order (new columns)
+    for (const col of fieldToCol.values()) {
+      ordered.push(col);
+    }
+
+    return ordered;
+  }, [state.columnOrder]);
 
   // Helper to handle column width changes from DataGrid
   const handleColumnWidthChange = useCallback(
@@ -98,5 +124,6 @@ export function useTableState(storageKey: string) {
     handleColumnWidthChange,
     resetTableLayout,
     applyColumnWidths,
+    applyColumnOrder,
   };
 }

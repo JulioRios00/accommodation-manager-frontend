@@ -27,7 +27,7 @@ export default function BedsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bed | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('beds_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('beds_col_visibility');
 
   const load = () => getBeds().then(setBeds).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -119,7 +119,10 @@ export default function BedsPage() {
     },
   ];
 
-  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+  const columnsWithWidthsAndOrder = useMemo(() => {
+    const withWidths = applyColumnWidths(columns);
+    return applyColumnOrder(withWidths);
+  }, [columns, applyColumnWidths, applyColumnOrder]);
 
   const q = search.toLowerCase();
   const filtered = beds
@@ -175,7 +178,7 @@ export default function BedsPage() {
         <DataGrid
           autoHeight
           rows={filtered}
-          columns={columnsWithWidths}
+          columns={columnsWithWidthsAndOrder}
           pageSizeOptions={[10, 25]}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           disableRowSelectionOnClick

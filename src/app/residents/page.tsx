@@ -23,7 +23,7 @@ export default function ResidentsPage() {
   const [editing, setEditing] = useState<Resident | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [bedCodeByResident, setBedCodeByResident] = useState<Map<string, string>>(new Map());
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('residents_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('residents_col_visibility');
 
   const load = () => getResidents().then(setResidents).catch(() => {});
   const loadBedCodes = () => Promise.all([getBeds(), getBookings('active')]).then(([beds, bookings]) => {
@@ -84,7 +84,10 @@ export default function ResidentsPage() {
     },
   ];
 
-  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+  const columnsWithWidthsAndOrder = useMemo(() => {
+    const withWidths = applyColumnWidths(columns);
+    return applyColumnOrder(withWidths);
+  }, [columns, applyColumnWidths, applyColumnOrder]);
 
   const q = search.toLowerCase();
   const filtered = residents
@@ -123,7 +126,7 @@ export default function ResidentsPage() {
         <DataGrid
           autoHeight
           rows={filtered}
-          columns={columnsWithWidths}
+          columns={columnsWithWidthsAndOrder}
           pageSizeOptions={[10, 25]}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           disableRowSelectionOnClick
