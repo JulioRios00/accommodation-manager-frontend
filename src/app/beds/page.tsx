@@ -1,14 +1,16 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, ButtonGroup, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RestoreIcon from '@mui/icons-material/Restore';
+import ViewWeekIcon from '@mui/icons-material/ViewWeek';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, Bed, Bedroom, Property, Resident } from '@/services/api';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
+import ColumnReorderDialog from '@/components/shared/ColumnReorderDialog';
 import BedDialog from '@/components/crud/BedDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
@@ -27,6 +29,7 @@ export default function BedsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bed | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [columnReorderOpen, setColumnReorderOpen] = useState(false);
   const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('beds_col_visibility');
 
   const load = () => getBeds().then(setBeds).catch(() => {});
@@ -169,6 +172,9 @@ export default function BedsPage() {
           sx={{ width: 380 }}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
         />
+        <Tooltip title="Reorder columns">
+          <IconButton size="small" onClick={() => setColumnReorderOpen(true)}><ViewWeekIcon fontSize="small" /></IconButton>
+        </Tooltip>
         <Tooltip title="Reset column layout to default">
           <IconButton size="small" onClick={resetTableLayout}><RestoreIcon fontSize="small" /></IconButton>
         </Tooltip>
@@ -195,6 +201,14 @@ export default function BedsPage() {
         />
       </Box>
 
+      <ColumnReorderDialog
+        open={columnReorderOpen}
+        columns={columns}
+        columnOrder={columnOrder}
+        onReorder={handleColumnOrderChange}
+        onReset={resetTableLayout}
+        onClose={() => setColumnReorderOpen(false)}
+      />
       <BedDialog
         open={dialogOpen}
         initial={editing}
