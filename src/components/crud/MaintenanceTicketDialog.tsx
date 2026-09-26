@@ -18,7 +18,19 @@ import {
 
 type FormState = Omit<MaintenanceTicket, 'id' | 'orderNumber' | 'createdAt'>;
 
-const CATEGORIES = ['plumbing', 'electrical', 'internet', 'other'];
+const CATEGORIES = [
+  'Plumbing and leak repairs',
+  'Appliance and equipment servicing',
+  'Furniture and bedding replacements',
+  'Door, window, and lock maintenance',
+  'Electrical and lighting maintenance',
+  'HVAC and boiler servicing',
+  'Painting, mould, and structural repairs',
+  'Cleaning, waste, pest control, and garden',
+  'Fire safety and security issues',
+  'Internet issues',
+  'Other',
+];
 
 const empty: FormState = {
   propertyId: '', category: null, bedId: null, residentId: null,

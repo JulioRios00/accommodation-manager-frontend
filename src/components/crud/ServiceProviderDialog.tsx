@@ -5,7 +5,22 @@ import { ServiceProvider } from '@/services/api';
 
 type FormState = Omit<ServiceProvider, 'id' | 'active'>;
 const empty: FormState = { name: '', contactName: '', phone: '', email: '', specialty: '', notes: '' };
-const specialties = ['', 'plumbing', 'electrical', 'cleaning', 'general', 'other'];
+const specialties = [
+  '',
+  'Plumbing Services',
+  'Electrical Services',
+  'Gas & Boiler Services',
+  'Key Cut Services',
+  'Appliance Repairs',
+  'Painting Services',
+  'Cleaning Services',
+  'Car Maintenance',
+  'Utility - Waste',
+  'Utility - Electricity',
+  'Utility - Gas',
+  'Utility - Oil',
+  'Utility - Internet',
+];
 
 interface Props {
   open: boolean; initial?: ServiceProvider | null;

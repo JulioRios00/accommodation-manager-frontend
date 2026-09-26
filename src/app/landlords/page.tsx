@@ -1,16 +1,18 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Typography, Box, Button, IconButton, TextField, InputAdornment } from '@mui/material';
+import { useEffect, useState, useMemo } from 'react';
+import { Typography, Box, Button, IconButton, TextField, InputAdornment, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getLandlords, createLandlord, updateLandlord, deleteLandlord, Landlord } from '@/services/api';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import LandlordDialog from '@/components/crud/LandlordDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { useTableState } from '@/hooks/useTableState';
 
 export default function LandlordsPage() {
   const { can } = useRole();
@@ -19,6 +21,7 @@ export default function LandlordsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Landlord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('landlords_col_visibility');
 
   const load = () => getLandlords().then(setLandlords).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -61,6 +64,8 @@ export default function LandlordsPage() {
     },
   ];
 
+  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+
   const q = search.toLowerCase();
   const filtered = landlords.filter(l => [l.name, l.email].some(v => v?.toLowerCase().includes(q)));
 
@@ -70,12 +75,16 @@ export default function LandlordsPage() {
         <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Landlords</Typography>
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
+        <Tooltip title="Reset column layout to default">
+          <IconButton size="small" onClick={resetTableLayout}><RestoreIcon fontSize="small" /></IconButton>
+        </Tooltip>
         {can('landlord:edit') && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>
         )}
       </Box>
-      <DataGrid rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
+      <DataGrid rows={filtered} columns={columnsWithWidths} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
         pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        columnVisibilityModel={columnVisibility} onColumnVisibilityModelChange={handleColumnVisibilityChange}
         slots={{ footer: CustomGridFooter }}
         slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />
       <LandlordDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />

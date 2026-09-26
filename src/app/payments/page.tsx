@@ -1,11 +1,12 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Box, Tabs, Tab, Button, IconButton, TextField, InputAdornment, Chip, MenuItem } from '@mui/material';
+import { Typography, Box, Tabs, Tab, Button, IconButton, TextField, InputAdornment, Chip, MenuItem, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
@@ -23,6 +24,7 @@ import DepositTransactionDialog from '@/components/crud/DepositTransactionDialog
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { bedCode } from '@/lib/bedCode';
 import { useRole } from '@/hooks/useRole';
+import { useTableState } from '@/hooks/useTableState';
 import { useFeatureFlags } from '@/lib/FeatureFlagsProvider';
 
 const statusChip = (v: string) => {
@@ -42,6 +44,9 @@ export default function PaymentsPage() {
   const { isEnabled } = useFeatureFlags();
   const receivablesLedgerEnabled = isEnabled('receivables_ledger');
   const [tab, setTab] = useState(0);
+  const { columnVisibility: rentColVis, handleColumnVisibilityChange: handleRentColVisChange, resetTableLayout: resetRentLayout, applyColumnWidths: applyRentWidths } = useTableState('payments_rent_col_visibility');
+  const { columnVisibility: landlordColVis, handleColumnVisibilityChange: handleLandlordColVisChange, resetTableLayout: resetLandlordLayout, applyColumnWidths: applyLandlordWidths } = useTableState('payments_landlord_col_visibility');
+  const { columnVisibility: depositsColVis, handleColumnVisibilityChange: handleDepositsColVisChange, resetTableLayout: resetDepositsLayout, applyColumnWidths: applyDepositsWidths } = useTableState('payments_deposits_col_visibility');
   const [rentPayments, setRentPayments] = useState<RentPayment[]>([]);
   const [landlordPayments, setLandlordPayments] = useState<LandlordPayment[]>([]);
   const [deposits, setDeposits] = useState<DepositTransaction[]>([]);
@@ -249,6 +254,10 @@ export default function PaymentsPage() {
       } },
   ];
 
+  const rentColumnsWithWidths = useMemo(() => applyRentWidths(rentColumns), [rentColumns, applyRentWidths]);
+  const landlordColumnsWithWidths = useMemo(() => applyLandlordWidths(landlordColumns), [landlordColumns, applyLandlordWidths]);
+  const depositColumnsWithWidths = useMemo(() => applyDepositsWidths(depositColumns), [depositColumns, applyDepositsWidths]);
+
   const q = search.toLowerCase();
   const filteredRent = rentPayments
     .filter(r => !monthFilter || r.month?.slice(5, 7) === monthFilter)
@@ -299,6 +308,9 @@ export default function PaymentsPage() {
         )}
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
+        {tab === 0 && <Tooltip title="Reset column layout to default"><IconButton size="small" onClick={resetRentLayout}><RestoreIcon fontSize="small" /></IconButton></Tooltip>}
+        {tab === 1 && <Tooltip title="Reset column layout to default"><IconButton size="small" onClick={resetLandlordLayout}><RestoreIcon fontSize="small" /></IconButton></Tooltip>}
+        {tab === 2 && <Tooltip title="Reset column layout to default"><IconButton size="small" onClick={resetDepositsLayout}><RestoreIcon fontSize="small" /></IconButton></Tooltip>}
         {tab !== 3 && can('payment:edit') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
       </Box>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
@@ -307,9 +319,9 @@ export default function PaymentsPage() {
         <Tab label="Deposits" />
         {receivablesLedgerEnabled && <Tab label="Receivables Ledger" />}
       </Tabs>
-      {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
-      {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
-      {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumnsWithWidths} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={rentColVis} onColumnVisibilityModelChange={handleRentColVisChange} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumnsWithWidths} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={landlordColVis} onColumnVisibilityModelChange={handleLandlordColVisChange} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumnsWithWidths} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={depositsColVis} onColumnVisibilityModelChange={handleDepositsColVisChange} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 3 && receivablesLedgerEnabled && <DataGrid rows={ledger} columns={ledgerColumns} getRowId={r => r.paymentId} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 0 && <RentPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateRentPayment(id, data); else await createRentPayment(data); await load(); }} />}
       {tab === 1 && <LandlordPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateLandlordPayment(id, data); else await createLandlordPayment(data); await load(); }} />}

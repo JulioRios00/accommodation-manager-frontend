@@ -1,16 +1,18 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Typography, Box, Button, IconButton, TextField, InputAdornment } from '@mui/material';
+import { useEffect, useState, useMemo } from 'react';
+import { Typography, Box, Button, IconButton, TextField, InputAdornment, ButtonGroup, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import { getResidents, createResident, updateResident, deleteResident, getBeds, getBookings, Resident } from '@/services/api';
 import ResidentDialog from '@/components/crud/ResidentDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { useTableState } from '@/hooks/useTableState';
 import { bedCode } from '@/lib/bedCode';
 
 export default function ResidentsPage() {
@@ -21,6 +23,7 @@ export default function ResidentsPage() {
   const [editing, setEditing] = useState<Resident | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [bedCodeByResident, setBedCodeByResident] = useState<Map<string, string>>(new Map());
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('residents_col_visibility');
 
   const load = () => getResidents().then(setResidents).catch(() => {});
   const loadBedCodes = () => Promise.all([getBeds(), getBookings('active')]).then(([beds, bookings]) => {
@@ -81,11 +84,15 @@ export default function ResidentsPage() {
     },
   ];
 
+  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+
   const q = search.toLowerCase();
-  const filtered = residents.filter(r =>
-    [r.fullName, r.email, r.telephone, r.nationality, r.personalId, r.source]
-      .some(v => v?.toLowerCase().includes(q))
-  );
+  const filtered = residents
+    .filter(r =>
+      [r.fullName, r.email, r.telephone, r.nationality, r.personalId, r.source]
+        .some(v => v?.toLowerCase().includes(q))
+    )
+    .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
 
   return (
     <Box>
@@ -98,23 +105,30 @@ export default function ResidentsPage() {
         )}
       </Box>
 
-      <TextField
-        placeholder="Search by name, email, nationality or ID…"
-        size="small"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        sx={{ mb: 2, width: 340 }}
-        slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
-      />
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+        <TextField
+          placeholder="Search by name, email, nationality or ID…"
+          size="small"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          sx={{ width: 340 }}
+          slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
+        />
+        <Tooltip title="Reset column layout to default">
+          <IconButton size="small" onClick={resetTableLayout}><RestoreIcon fontSize="small" /></IconButton>
+        </Tooltip>
+      </Box>
 
       <Box sx={{ bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
         <DataGrid
           autoHeight
           rows={filtered}
-          columns={columns}
+          columns={columnsWithWidths}
           pageSizeOptions={[10, 25]}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           disableRowSelectionOnClick
+          columnVisibilityModel={columnVisibility}
+          onColumnVisibilityModelChange={handleColumnVisibilityChange}
           onRowDoubleClick={params => { setEditing(params.row as Resident); setDialogOpen(true); }}
           slots={{ footer: CustomGridFooter }}
           slotProps={{ footer: { pageSizeOptions: [10, 25] } }}

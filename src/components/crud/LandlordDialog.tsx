@@ -8,7 +8,7 @@ type FormState = Omit<Landlord, 'id' | 'active'>;
 
 const empty: FormState = {
   name: '', email: '', address: '', bankName: '', sortCode: '', accountNumber: '',
-  iban: '', bic: '', paymentReference: '', paymentMethod: '', residentPaymentDueDay: null,
+  iban: '', bic: '', paymentMethod: '', paymentReference: '', residentPaymentDueDay: null,
 };
 
 interface Props {
@@ -60,7 +60,6 @@ export default function LandlordDialog({ open, initial, onClose, onSave }: Props
             <Grid container spacing={2}>
               {tf('Bank Name', 'bankName')} {tf('Sort Code', 'sortCode')}
               {tf('Account Number', 'accountNumber')} {tf('IBAN', 'iban')} {tf('BIC', 'bic')}
-              {tf('Payment Reference', 'paymentReference', 12)}
             </Grid>
           </AccordionDetails>
         </Accordion>
@@ -75,9 +74,6 @@ export default function LandlordDialog({ open, initial, onClose, onSave }: Props
                 <TextField select label="Payment Method" value={form.paymentMethod ?? ''} onChange={e => set('paymentMethod', e.target.value)} fullWidth size="small">
                   {['', 'BankTransfer', 'StandingOrder'].map(v => <MenuItem key={v} value={v}>{v || '—'}</MenuItem>)}
                 </TextField>
-              </Grid>
-              <Grid size={{ xs: 3 }}>
-                <TextField label="Resident Due Day" type="number" value={form.residentPaymentDueDay ?? ''} onChange={e => set('residentPaymentDueDay', e.target.value ? +e.target.value : null)} fullWidth size="small" slotProps={{ htmlInput: { min: 1, max: 31 } }} />
               </Grid>
             </Grid>
           </AccordionDetails>

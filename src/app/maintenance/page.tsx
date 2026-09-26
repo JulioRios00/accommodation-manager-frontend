@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Box, Button, Chip, IconButton, InputAdornment, MenuItem,
   Paper, Select, SelectChangeEvent, Tab, Tabs, TextField, Tooltip,
@@ -11,6 +11,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LockIcon from '@mui/icons-material/Lock';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
@@ -22,6 +23,7 @@ import {
 import MaintenanceTicketDialog from '@/components/crud/MaintenanceTicketDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { useTableState } from '@/hooks/useTableState';
 
 // ── Display maps ────────────────────────────────────────────────────────────
 const URGENCY_LABEL: Record<string, string> = {
@@ -103,6 +105,7 @@ export default function MaintenancePage() {
   const canManage = can('maintenance:write');
   const canView = can('maintenance:view');
   const [tab, setTab] = useState(0);
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('maintenance_col_visibility');
 
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [search, setSearch] = useState('');
@@ -278,6 +281,8 @@ export default function MaintenancePage() {
     },
   ];
 
+  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+
   const q = search.toLowerCase();
   const filtered = tickets.filter(t =>
     (!statusFilter || t.status === statusFilter) &&
@@ -312,7 +317,7 @@ export default function MaintenancePage() {
       {/* ── Tab 0: All Tickets ── */}
       {tab === 0 && (
         <>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
             <TextField
               size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
               slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
@@ -321,13 +326,17 @@ export default function MaintenancePage() {
               <MenuItem value="">All</MenuItem>
               {Object.entries(STATUS_LABEL).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
             </TextField>
+            <Tooltip title="Reset column layout to default">
+              <IconButton size="small" onClick={resetTableLayout}><RestoreIcon fontSize="small" /></IconButton>
+            </Tooltip>
           </Box>
           <DataGrid
-            rows={filtered} columns={columns} getRowId={r => r.id}
+            rows={filtered} columns={columnsWithWidths} getRowId={r => r.id}
             autoHeight disableRowSelectionOnClick
             onRowDoubleClick={params => openDetail(params.row as MaintenanceTicket)}
             pageSizeOptions={[25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+            columnVisibilityModel={columnVisibility} onColumnVisibilityModelChange={handleColumnVisibilityChange}
             slots={{ footer: CustomGridFooter }}
             slotProps={{ footer: { pageSizeOptions: [25, 50] } }}
             sx={{

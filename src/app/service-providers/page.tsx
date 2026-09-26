@@ -1,16 +1,18 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Typography, Box, Button, IconButton, TextField, InputAdornment } from '@mui/material';
+import { useEffect, useState, useMemo } from 'react';
+import { Typography, Box, Button, IconButton, TextField, InputAdornment, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getServiceProviders, createServiceProvider, updateServiceProvider, deleteServiceProvider, ServiceProvider } from '@/services/api';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import ServiceProviderDialog from '@/components/crud/ServiceProviderDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { useTableState } from '@/hooks/useTableState';
 
 export default function ServiceProvidersPage() {
   const { can } = useRole();
@@ -19,6 +21,7 @@ export default function ServiceProvidersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceProvider | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('serviceProviders_col_visibility');
 
   const load = () => getServiceProviders().then(setItems).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -44,6 +47,8 @@ export default function ServiceProvidersPage() {
     },
   ];
 
+  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+
   const q = search.toLowerCase();
   const filtered = items.filter(i => [i.name, i.contactName, i.specialty].some(v => v?.toLowerCase().includes(q)));
 
@@ -53,10 +58,14 @@ export default function ServiceProvidersPage() {
         <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700 }}>Service Providers</Typography>
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
+        <Tooltip title="Reset column layout to default">
+          <IconButton size="small" onClick={resetTableLayout}><RestoreIcon fontSize="small" /></IconButton>
+        </Tooltip>
         {can('serviceProvider:edit') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
       </Box>
-      <DataGrid rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
+      <DataGrid rows={filtered} columns={columnsWithWidths} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
         pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        columnVisibilityModel={columnVisibility} onColumnVisibilityModelChange={handleColumnVisibilityChange}
         slots={{ footer: CustomGridFooter }}
         slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />
       <ServiceProviderDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />

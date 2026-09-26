@@ -1,16 +1,18 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment } from '@mui/material';
+import { useEffect, useState, useMemo } from 'react';
+import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, ButtonGroup, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, Bed, Bedroom, Property, Resident } from '@/services/api';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import BedDialog from '@/components/crud/BedDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { useTableState } from '@/hooks/useTableState';
 import { bedCode } from '@/lib/bedCode';
 
 type BedFormState = Omit<Bed, 'id' | 'propertyCode' | 'activeBooking'>;
@@ -25,6 +27,7 @@ export default function BedsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bed | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('beds_col_visibility');
 
   const load = () => getBeds().then(setBeds).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -116,15 +119,25 @@ export default function BedsPage() {
     },
   ];
 
+  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+
   const q = search.toLowerCase();
-  const filtered = beds.filter(b => {
-    const residentName = b.activeBooking?.residentId ? residentMap.get(b.activeBooking.residentId)?.fullName : undefined;
-    return [
-      bedCode(b),
-      b.bedroomType, b.sex, b.bedSize, b.propertyCode,
-      b.bedroomName, b.name, b.status, residentName,
-    ].some(v => v?.toLowerCase().includes(q));
-  });
+  const filtered = beds
+    .filter(b => {
+      const residentName = b.activeBooking?.residentId ? residentMap.get(b.activeBooking.residentId)?.fullName : undefined;
+      return [
+        bedCode(b),
+        b.bedroomType, b.sex, b.bedSize, b.propertyCode,
+        b.bedroomName, b.name, b.status, residentName,
+      ].some(v => v?.toLowerCase().includes(q));
+    });
+
+  const stats = {
+    total: beds.length,
+    occupied: beds.filter(b => b.status === 'allocated').length,
+    empty: beds.filter(b => b.status === 'vacant').length,
+    onRadar: 0,
+  };
 
   return (
     <Box>
@@ -137,23 +150,37 @@ export default function BedsPage() {
         )}
       </Box>
 
-      <TextField
-        placeholder="Search by bed code, bedroom, room type, status…"
-        size="small"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        sx={{ mb: 2, width: 380 }}
-        slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
-      />
+      <Box sx={{ display: 'flex', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
+        <Chip label={`Total Beds: ${stats.total}`} variant="outlined" size="small" />
+        <Chip label={`Occupied: ${stats.occupied}`} variant="outlined" size="small" />
+        <Chip label={`Empty: ${stats.empty}`} variant="outlined" size="small" />
+        <Chip label={`On Radar: ${stats.onRadar}`} variant="outlined" size="small" />
+      </Box>
+
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+        <TextField
+          placeholder="Search by bed code, bedroom, room type, status…"
+          size="small"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          sx={{ width: 380 }}
+          slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
+        />
+        <Tooltip title="Reset column layout to default">
+          <IconButton size="small" onClick={resetTableLayout}><RestoreIcon fontSize="small" /></IconButton>
+        </Tooltip>
+      </Box>
 
       <Box sx={{ bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
         <DataGrid
           autoHeight
           rows={filtered}
-          columns={columns}
+          columns={columnsWithWidths}
           pageSizeOptions={[10, 25]}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           disableRowSelectionOnClick
+          columnVisibilityModel={columnVisibility}
+          onColumnVisibilityModelChange={handleColumnVisibilityChange}
           slots={{ footer: CustomGridFooter }}
           slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
           sx={{

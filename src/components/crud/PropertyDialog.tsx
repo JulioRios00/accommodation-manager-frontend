@@ -27,7 +27,7 @@ const empty: FormState = {
   eirCode: null, propertyType: null,
   crn: null, propertyEmail: null,
   paymentReference: null, propertySupplier: null, paymentNotes: null, landlordPaymentDueDay: null,
-  residentPaymentDueDay: null,
+  residentPaymentDueDay: null, landlordDepositAmount: null, landlordMonthlyRentAmount: null,
   landlordId: null,
   leaseStartDate: null,
   leaseEndDate: null,
@@ -385,6 +385,24 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
                   onChange={e => set('residentPaymentDueDay', e.target.value ? +e.target.value : null)}
                   fullWidth size="small" slotProps={{ htmlInput: { min: 1, max: 31 } }}
                   helperText="Day of month rent is due for this property's residents"
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  label="Landlord Deposit (€)" type="number"
+                  value={form.landlordDepositAmount ?? ''}
+                  onChange={e => set('landlordDepositAmount', e.target.value ? +e.target.value : null)}
+                  fullWidth size="small" slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                  helperText="Deposit amount paid by landlord"
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  label="Landlord Monthly Rent (€)" type="number"
+                  value={form.landlordMonthlyRentAmount ?? ''}
+                  onChange={e => set('landlordMonthlyRentAmount', e.target.value ? +e.target.value : null)}
+                  fullWidth size="small" slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                  helperText="Monthly rent payable to landlord"
                 />
               </Grid>
               {(() => {

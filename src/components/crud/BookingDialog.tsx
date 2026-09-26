@@ -128,6 +128,16 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
   };
 
   const handleSave = async () => {
+    // Validate check-out date is not before check-in date
+    if (form.checkInDate && form.checkOutDate) {
+      const checkInDate = new Date(form.checkInDate);
+      const checkOutDate = new Date(form.checkOutDate);
+      if (checkOutDate < checkInDate) {
+        alert('Check-out date cannot be before check-in date');
+        return;
+      }
+    }
+
     if (rentOrDepositChanged) {
       setRentChangeScope('period');
       setScopePromptOpen(true);

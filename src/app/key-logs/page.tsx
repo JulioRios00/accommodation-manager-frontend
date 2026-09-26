@@ -1,16 +1,18 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, MenuItem } from '@mui/material';
+import { useEffect, useState, useMemo } from 'react';
+import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, MenuItem, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getKeyLogs, createKeyLog, updateKeyLog, deleteKeyLog, KeyLog } from '@/services/api';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import KeyLogDialog from '@/components/crud/KeyLogDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { useTableState } from '@/hooks/useTableState';
 
 export default function KeyLogsPage() {
   const { can } = useRole();
@@ -20,6 +22,7 @@ export default function KeyLogsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<KeyLog | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths } = useTableState('keyLogs_col_visibility');
 
   const load = () => getKeyLogs().then(setItems).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -43,6 +46,8 @@ export default function KeyLogsPage() {
     },
   ];
 
+  const columnsWithWidths = useMemo(() => applyColumnWidths(columns), [columns, applyColumnWidths]);
+
   const q = search.toLowerCase();
   const filtered = items.filter(i =>
     (!statusFilter || i.returnStatus === statusFilter) &&
@@ -58,10 +63,14 @@ export default function KeyLogsPage() {
         <TextField select size="small" label="Status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} sx={{ width: 120 }}>
           {['', 'out', 'returned'].map(s => <MenuItem key={s} value={s}>{s || 'All'}</MenuItem>)}
         </TextField>
+        <Tooltip title="Reset column layout to default">
+          <IconButton size="small" onClick={resetTableLayout}><RestoreIcon fontSize="small" /></IconButton>
+        </Tooltip>
         {can('keyLog:edit') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Log Key</Button>}
       </Box>
-      <DataGrid rows={filtered} columns={columns} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
+      <DataGrid rows={filtered} columns={columnsWithWidths} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
         pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        columnVisibilityModel={columnVisibility} onColumnVisibilityModelChange={handleColumnVisibilityChange}
         slots={{ footer: CustomGridFooter }}
         slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />
       <KeyLogDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)}
