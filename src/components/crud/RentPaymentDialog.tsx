@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField, Autocomplete } from '@mui/material';
 import { RentPayment, Property, Resident, Booking, Bed, getProperties, getResidents, getBookings, getBeds } from '@/services/api';
 import { bedCode } from '@/lib/bedCode';
 
@@ -16,6 +16,7 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
   const [residents, setResidents] = useState<Resident[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
+  const [residentSearch, setResidentSearch] = useState('');
 
   useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
   useEffect(() => {
@@ -49,6 +50,14 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
     () => residents.filter(r => propertyResidentIds.has(r.id)),
     [residents, propertyResidentIds],
   );
+
+  // filter and sort property residents by search
+  const filteredPropertyResidents = useMemo(() => {
+    const q = residentSearch.toLowerCase();
+    return propertyResidents
+      .filter(r => r.fullName?.toLowerCase().includes(q))
+      .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+  }, [propertyResidents, residentSearch]);
 
   // bookings for the selected resident in this property
   const residentBookings = useMemo(
@@ -91,15 +100,19 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}>
-            <TextField
-              select label="Resident *" value={form.residentId}
-              onChange={e => handleResidentChange(e.target.value)}
-              fullWidth size="small"
+            <Autocomplete
+              options={filteredPropertyResidents}
+              getOptionLabel={(r) => r.fullName || ''}
+              value={propertyResidents.find(r => r.id === form.residentId) || null}
+              onChange={(_, resident) => resident && handleResidentChange(resident.id)}
+              inputValue={residentSearch}
+              onInputChange={(_, value) => setResidentSearch(value)}
+              fullWidth
+              size="small"
               disabled={!form.propertyId}
-              helperText={form.propertyId && propertyResidents.length === 0 ? 'No active residents in this property' : ''}
-            >
-              {propertyResidents.map(r => <MenuItem key={r.id} value={r.id}>{r.fullName}</MenuItem>)}
-            </TextField>
+              renderInput={(params) => <TextField {...params} label="Resident *" helperText={form.propertyId && propertyResidents.length === 0 ? 'No active residents in this property' : ''} />}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+            />
           </Grid>
           <Grid size={{ xs: 12 }}>
             <TextField

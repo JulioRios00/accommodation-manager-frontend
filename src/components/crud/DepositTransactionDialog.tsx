@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField, Autocomplete } from '@mui/material';
 import { DepositTransaction, Property, Resident, Bed, getProperties, getResidents, getBeds } from '@/services/api';
 import { bedCode } from '@/lib/bedCode';
 
@@ -15,6 +15,7 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
   const [properties, setProperties] = useState<Property[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
+  const [residentSearch, setResidentSearch] = useState('');
 
   useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
   useEffect(() => {
@@ -25,6 +26,13 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
   }, [open]);
 
   const propertyBeds = useMemo(() => beds.filter(b => b.propertyId === form.propertyId), [beds, form.propertyId]);
+
+  const filteredResidents = useMemo(() => {
+    const q = residentSearch.toLowerCase();
+    return residents
+      .filter(r => r.fullName?.toLowerCase().includes(q))
+      .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+  }, [residents, residentSearch]);
 
   const set = (f: keyof FormState, v: unknown) => setForm(prev => ({ ...prev, [f]: v === '' ? null : v }));
 
@@ -46,9 +54,19 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
             </TextField>
           </Grid>
           <Grid size={{ xs: 8 }}>
-            <TextField select label="Resident" value={form.residentId} onChange={e => selectResident(e.target.value)} fullWidth required size="small">
-              {residents.map(r => <MenuItem key={r.id} value={r.id}>{r.fullName}</MenuItem>)}
-            </TextField>
+            <Autocomplete
+              options={filteredResidents}
+              getOptionLabel={(r) => r.fullName || ''}
+              value={residents.find(r => r.id === form.residentId) || null}
+              onChange={(_, resident) => resident && selectResident(resident.id)}
+              inputValue={residentSearch}
+              onInputChange={(_, value) => setResidentSearch(value)}
+              fullWidth
+              size="small"
+              disabled={false}
+              renderInput={(params) => <TextField {...params} label="Resident" required />}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+            />
           </Grid>
           <Grid size={{ xs: 6 }}>
             <TextField
@@ -67,7 +85,7 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
               {propertyBeds.map(b => <MenuItem key={b.id} value={b.id}>{bedCode(b)}</MenuItem>)}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 6 }}><TextField label="Resident Name" value={form.residentName} onChange={e => set('residentName', e.target.value)} fullWidth required size="small" /></Grid>
+          <Grid size={{ xs: 6 }}><TextField label="Resident Name" value={form.residentName} disabled fullWidth required size="small" helperText="Auto-populated from resident selection" /></Grid>
           <Grid size={{ xs: 4 }}><TextField label="Deposit Amount (€)" type="number" value={form.depositAmount} onChange={e => set('depositAmount', +e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 4 }}><TextField label="Pro-rata Rent (€)" type="number" value={form.proRataRentAmount ?? ''} onChange={e => set('proRataRentAmount', e.target.value ? +e.target.value : null)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 4 }}>
