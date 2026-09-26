@@ -23,7 +23,7 @@ export default function ResidentsPage() {
   const [editing, setEditing] = useState<Resident | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [bedCodeByResident, setBedCodeByResident] = useState<Map<string, string>>(new Map());
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('residents_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('residents_col_visibility');
 
   const load = () => getResidents().then(setResidents).catch(() => {});
   const loadBedCodes = () => Promise.all([getBeds(), getBookings('active')]).then(([beds, bookings]) => {
@@ -132,6 +132,8 @@ export default function ResidentsPage() {
           disableRowSelectionOnClick
           columnVisibilityModel={columnVisibility}
           onColumnVisibilityModelChange={handleColumnVisibilityChange}
+          sortModel={sortModel}
+          onSortModelChange={handleSortModelChange}
           onRowDoubleClick={params => { setEditing(params.row as Resident); setDialogOpen(true); }}
           slots={{ footer: CustomGridFooter }}
           slotProps={{ footer: { pageSizeOptions: [10, 25] } }}

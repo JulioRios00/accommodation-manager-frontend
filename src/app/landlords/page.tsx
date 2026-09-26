@@ -21,7 +21,7 @@ export default function LandlordsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Landlord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('landlords_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('landlords_col_visibility');
 
   const load = () => getLandlords().then(setLandlords).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -88,6 +88,7 @@ export default function LandlordsPage() {
       <DataGrid rows={filtered} columns={columnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
         pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
         columnVisibilityModel={columnVisibility} onColumnVisibilityModelChange={handleColumnVisibilityChange}
+        sortModel={sortModel} onSortModelChange={handleSortModelChange}
         slots={{ footer: CustomGridFooter }}
         slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />
       <LandlordDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />

@@ -30,7 +30,7 @@ export default function BedsPage() {
   const [editing, setEditing] = useState<Bed | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [columnReorderOpen, setColumnReorderOpen] = useState(false);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('beds_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('beds_col_visibility');
 
   const load = () => getBeds().then(setBeds).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -190,6 +190,8 @@ export default function BedsPage() {
           disableRowSelectionOnClick
           columnVisibilityModel={columnVisibility}
           onColumnVisibilityModelChange={handleColumnVisibilityChange}
+          sortModel={sortModel}
+          onSortModelChange={handleSortModelChange}
           slots={{ footer: CustomGridFooter }}
           slotProps={{ footer: { pageSizeOptions: [10, 25] } }}
           sx={{

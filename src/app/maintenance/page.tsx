@@ -105,7 +105,7 @@ export default function MaintenancePage() {
   const canManage = can('maintenance:write');
   const canView = can('maintenance:view');
   const [tab, setTab] = useState(0);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('maintenance_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('maintenance_col_visibility');
 
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [search, setSearch] = useState('');
@@ -340,6 +340,7 @@ export default function MaintenancePage() {
             pageSizeOptions={[25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
             columnVisibilityModel={columnVisibility} onColumnVisibilityModelChange={handleColumnVisibilityChange}
+            sortModel={sortModel} onSortModelChange={handleSortModelChange}
             slots={{ footer: CustomGridFooter }}
             slotProps={{ footer: { pageSizeOptions: [25, 50] } }}
             sx={{

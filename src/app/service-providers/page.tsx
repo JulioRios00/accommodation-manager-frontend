@@ -21,7 +21,7 @@ export default function ServiceProvidersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceProvider | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder } = useTableState('serviceProviders_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('serviceProviders_col_visibility');
 
   const load = () => getServiceProviders().then(setItems).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -69,6 +69,7 @@ export default function ServiceProvidersPage() {
       <DataGrid rows={filtered} columns={columnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick
         pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
         columnVisibilityModel={columnVisibility} onColumnVisibilityModelChange={handleColumnVisibilityChange}
+        sortModel={sortModel} onSortModelChange={handleSortModelChange}
         slots={{ footer: CustomGridFooter }}
         slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />
       <ServiceProviderDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />

@@ -1,11 +1,12 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { GridColumnVisibilityModel, GridColDef } from '@mui/x-data-grid';
+import { GridColumnVisibilityModel, GridColDef, GridSortModel } from '@mui/x-data-grid';
 
 interface TableState {
   columnVisibility: GridColumnVisibilityModel;
   columnOrder: string[];
   columnWidths: Record<string, number>;
+  sortModel: GridSortModel;
 }
 
 export function useTableState(storageKey: string) {
@@ -13,6 +14,7 @@ export function useTableState(storageKey: string) {
     columnVisibility: {},
     columnOrder: [],
     columnWidths: {},
+    sortModel: [],
   });
 
   // Load state from localStorage on mount
@@ -55,8 +57,15 @@ export function useTableState(storageKey: string) {
     [saveState]
   );
 
+  const handleSortModelChange = useCallback(
+    (model: GridSortModel) => {
+      saveState({ sortModel: model });
+    },
+    [saveState]
+  );
+
   const resetTableLayout = useCallback(() => {
-    setState({ columnVisibility: {}, columnOrder: [], columnWidths: {} });
+    setState({ columnVisibility: {}, columnOrder: [], columnWidths: {}, sortModel: [] });
     try {
       localStorage.removeItem(storageKey);
     } catch {
@@ -119,9 +128,11 @@ export function useTableState(storageKey: string) {
     columnVisibility: state.columnVisibility,
     columnOrder: state.columnOrder,
     columnWidths: state.columnWidths,
+    sortModel: state.sortModel,
     handleColumnVisibilityChange,
     handleColumnOrderChange,
     handleColumnWidthChange,
+    handleSortModelChange,
     resetTableLayout,
     applyColumnWidths,
     applyColumnOrder,
