@@ -156,6 +156,13 @@ export default function PaymentsPage() {
       field: 'propertyCode', headerName: 'Property Code', width: 120,
       valueGetter: (_v, row) => propertyById.get((row as LandlordPayment).propertyId)?.code ?? '',
     },
+    {
+      field: 'paymentDay', headerName: 'Payment Day', width: 100,
+      valueGetter: (_v, row) => {
+        const prop = propertyById.get((row as LandlordPayment).propertyId);
+        return prop?.landlordPaymentDueDay ? `${prop.landlordPaymentDueDay}${prop.landlordPaymentDueDay === 1 ? 'st' : prop.landlordPaymentDueDay === 2 ? 'nd' : prop.landlordPaymentDueDay === 3 ? 'rd' : 'th'}` : '—';
+      },
+    },
     { field: 'amountDue', headerName: 'Due (€)', width: 100, type: 'number' },
     { field: 'amountPaid', headerName: 'Paid (€)', width: 100, type: 'number' },
     { field: 'dateDue', headerName: 'Due Date', width: 110 },
