@@ -393,7 +393,7 @@ export default function PropertyDialog({ open, initial, onClose, onSave, landlor
                   value={form.landlordDepositAmount ?? ''}
                   onChange={e => set('landlordDepositAmount', e.target.value ? +e.target.value : null)}
                   fullWidth size="small" slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
-                  helperText="Deposit amount paid by landlord"
+                  helperText="Deposit amount held by landlord"
                 />
               </Grid>
               <Grid size={{ xs: 6 }}>
