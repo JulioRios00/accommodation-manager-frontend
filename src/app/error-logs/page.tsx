@@ -35,7 +35,7 @@ export default function ErrorLogsPage() {
 
   const loadErrors = async () => {
     try {
-      const res = await fetch(`/error-logs?resolved=${!showUnresolved}`);
+      const res = await fetch(`/api/error-logs?resolved=${!showUnresolved}`);
       const data = await res.json();
       setErrors(data.items || []);
     } catch (err) {
@@ -46,7 +46,7 @@ export default function ErrorLogsPage() {
   const handleResolve = async () => {
     if (!selectedError) return;
     try {
-      await fetch(`/error-logs/${selectedError.id}/resolve`, {
+      await fetch(`/api/error-logs/${selectedError.id}/resolve`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: resolveNotes }),
@@ -62,7 +62,7 @@ export default function ErrorLogsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/error-logs/${id}`, { method: 'DELETE' });
+      await fetch(`/api/error-logs/${id}`, { method: 'DELETE' });
       await loadErrors();
     } catch (err) {
       console.error('Failed to delete error', err);
