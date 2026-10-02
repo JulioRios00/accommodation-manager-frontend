@@ -207,7 +207,7 @@ export default function BedsPage() {
         open={columnReorderOpen}
         columns={columns}
         columnOrder={columnOrder}
-        onReorder={handleColumnOrderChange}
+        onReorder={(order) => handleColumnOrderChange({ model: order })}
         onReset={resetTableLayout}
         onClose={() => setColumnReorderOpen(false)}
       />

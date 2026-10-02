@@ -11,7 +11,7 @@ interface ColumnReorderDialogProps {
   open: boolean;
   columns: GridColDef[];
   columnOrder: string[];
-  onReorder: (newOrder: string[]) => void;
+  onReorder: (order: string[]) => void;
   onReset: () => void;
   onClose: () => void;
 }
