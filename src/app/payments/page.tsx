@@ -62,6 +62,8 @@ export default function PaymentsPage() {
   const [search, setSearch] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
+  const [landlordMonthFilter, setLandlordMonthFilter] = useState('');
+  const [landlordYearFilter, setLandlordYearFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -286,17 +288,25 @@ export default function PaymentsPage() {
       const bedCode = bedCodeForBooking(r.bookingId);
       return [r.month, residentName, bedCode].some(v => v?.toLowerCase().includes(q));
     });
-  const filteredLandlord = landlordPayments.filter(l => {
-    if (!q) return true;
-    const landlordName = landlordById.get(l.landlordId)?.name ?? '';
-    const propertyCode = propertyById.get(l.propertyId)?.code ?? '';
-    return [l.month, landlordName, propertyCode].some(v => v?.toLowerCase().includes(q));
-  });
+  const filteredLandlord = landlordPayments
+    .filter(l => !landlordMonthFilter || l.month?.slice(5, 7) === landlordMonthFilter)
+    .filter(l => !landlordYearFilter || l.month?.slice(0, 4) === landlordYearFilter)
+    .filter(l => {
+      if (!q) return true;
+      const landlordName = landlordById.get(l.landlordId)?.name ?? '';
+      const propertyCode = propertyById.get(l.propertyId)?.code ?? '';
+      return [l.month, landlordName, propertyCode].some(v => v?.toLowerCase().includes(q));
+    });
   const filteredDeposits = deposits.filter(d => [d.residentName, d.type].some(v => v?.toLowerCase().includes(q)));
 
   const rentYears = useMemo(
     () => Array.from(new Set(rentPayments.map(r => r.month?.slice(0, 4)).filter(Boolean))).sort().reverse(),
     [rentPayments],
+  );
+
+  const landlordYears = useMemo(
+    () => Array.from(new Set(landlordPayments.map(l => l.month?.slice(0, 4)).filter(Boolean))).sort().reverse(),
+    [landlordPayments],
   );
 
   const handleDelete = async () => {
@@ -324,6 +334,18 @@ export default function PaymentsPage() {
             </TextField>
           </>
         )}
+        {tab === 1 && (
+          <>
+            <TextField select size="small" label="Month" value={landlordMonthFilter} onChange={e => setLandlordMonthFilter(e.target.value)} sx={{ width: 140 }}>
+              <MenuItem value="">All</MenuItem>
+              {MONTHS.map(m => <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>)}
+            </TextField>
+            <TextField select size="small" label="Year" value={landlordYearFilter} onChange={e => setLandlordYearFilter(e.target.value)} sx={{ width: 110 }}>
+              <MenuItem value="">All</MenuItem>
+              {landlordYears.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+            </TextField>
+          </>
+        )}
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
         {tab === 0 && <Tooltip title="Reset column layout to default"><IconButton size="small" onClick={resetRentLayout}><RestoreIcon fontSize="small" /></IconButton></Tooltip>}
@@ -332,7 +354,7 @@ export default function PaymentsPage() {
         {tab !== 3 && can('payment:edit') && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add</Button>}
       </Box>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-        <Tab label="Rent Payments" />
+        <Tab label="Resident Payments" />
         <Tab label="Landlord Payments" />
         <Tab label="Deposits" />
         {receivablesLedgerEnabled && <Tab label="Receivables Ledger" />}
