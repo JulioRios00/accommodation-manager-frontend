@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Box, Tabs, Tab, Button, IconButton, TextField, InputAdornment, Chip, MenuItem, Tooltip } from '@mui/material';
+import { Typography, Box, Tabs, Tab, Button, IconButton, TextField, InputAdornment, Chip, MenuItem, Tooltip, ButtonGroup } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -64,6 +64,8 @@ export default function PaymentsPage() {
   const [yearFilter, setYearFilter] = useState('');
   const [landlordMonthFilter, setLandlordMonthFilter] = useState('');
   const [landlordYearFilter, setLandlordYearFilter] = useState('');
+  const [depositTypeFilter, setDepositTypeFilter] = useState<'receipt' | 'refund' | 'all'>('all');
+  const [depositStatusFilter, setDepositStatusFilter] = useState<'pending' | 'done' | 'all'>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -224,6 +226,10 @@ export default function PaymentsPage() {
       valueGetter: (_v, row) => propertyById.get((row as DepositTransaction).propertyId)?.code ?? '',
     },
     {
+      field: 'businessUnit', headerName: 'Business Unit', width: 100,
+      valueGetter: (_v, row) => propertyById.get((row as DepositTransaction).propertyId)?.bu ?? '',
+    },
+    {
       field: 'bedCode', headerName: 'Bed Code', width: 110,
       valueGetter: (_v, row) => bedCodeForBed(bedById.get((row as DepositTransaction).bedId ?? '')),
     },
@@ -247,20 +253,13 @@ export default function PaymentsPage() {
     { field: 'comments', headerName: 'Comments', minWidth: 160, flex: 1 },
     { field: 'status', headerName: 'Status', width: 100, renderCell: (p) => statusChip(p.value as string) },
     { field: 'dateProcessed', headerName: 'Processed', width: 120 },
-    { field: 'actions', headerName: '', width: 190, sortable: false,
-      renderCell: (params) => {
-        const row = params.row as DepositTransaction;
-        const isPendingRefund = row.type === 'refund' && row.status === 'pending';
-        return <Box>
-          {isPendingRefund && can('payment:edit') && (
-            <Button size="small" startIcon={<CheckCircleIcon />} onClick={() => setMarkRefundCompleteId(row.id)}>
-              Mark Complete
-            </Button>
-          )}
+    { field: 'actions', headerName: '', width: 90, sortable: false,
+      renderCell: (params) => (
+        <Box>
           {can('payment:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
           {can('payment:write') && <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}><DeleteIcon fontSize="small" /></IconButton>}
-        </Box>;
-      } },
+        </Box>
+      ) },
   ];
 
   const rentColumnsWithWidthsAndOrder = useMemo(() => {
@@ -297,7 +296,20 @@ export default function PaymentsPage() {
       const propertyCode = propertyById.get(l.propertyId)?.code ?? '';
       return [l.month, landlordName, propertyCode].some(v => v?.toLowerCase().includes(q));
     });
-  const filteredDeposits = deposits.filter(d => [d.residentName, d.type].some(v => v?.toLowerCase().includes(q)));
+  const filteredDeposits = deposits
+    .filter(d => {
+      if (depositTypeFilter === 'receipt' || depositTypeFilter === 'refund') {
+        return d.type === depositTypeFilter;
+      }
+      return true;
+    })
+    .filter(d => {
+      if (depositStatusFilter === 'pending' || depositStatusFilter === 'done') {
+        return d.status === depositStatusFilter;
+      }
+      return true;
+    })
+    .filter(d => [d.residentName, d.type].some(v => v?.toLowerCase().includes(q)));
 
   const rentYears = useMemo(
     () => Array.from(new Set(rentPayments.map(r => r.month?.slice(0, 4)).filter(Boolean))).sort().reverse(),
@@ -344,6 +356,24 @@ export default function PaymentsPage() {
               <MenuItem value="">All</MenuItem>
               {landlordYears.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
             </TextField>
+          </>
+        )}
+        {tab === 2 && (
+          <>
+            <ButtonGroup size="small">
+              {(['receipt', 'refund', 'all'] as const).map(v => (
+                <Button key={v} variant={depositTypeFilter === v ? 'contained' : 'outlined'} onClick={() => setDepositTypeFilter(v)}>
+                  {v === 'all' ? 'All' : v.charAt(0).toUpperCase() + v.slice(1)}
+                </Button>
+              ))}
+            </ButtonGroup>
+            <ButtonGroup size="small">
+              {(['pending', 'done', 'all'] as const).map(v => (
+                <Button key={v} variant={depositStatusFilter === v ? 'contained' : 'outlined'} onClick={() => setDepositStatusFilter(v)}>
+                  {v === 'all' ? 'All' : v.charAt(0).toUpperCase() + v.slice(1)}
+                </Button>
+              ))}
+            </ButtonGroup>
           </>
         )}
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}

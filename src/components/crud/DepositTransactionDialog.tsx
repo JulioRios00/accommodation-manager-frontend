@@ -99,7 +99,6 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
               {propertyBeds.map(b => <MenuItem key={b.id} value={b.id}>{bedCode(b)}</MenuItem>)}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 6 }}><TextField label="Resident Name" value={form.residentName} disabled fullWidth required size="small" helperText="Auto-populated from resident selection" /></Grid>
           <Grid size={{ xs: 4 }}><TextField label="Deposit Amount (€)" type="number" value={form.depositAmount} onChange={e => set('depositAmount', +e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 4 }}><TextField label="Pro-rata Rent (€)" type="number" value={form.proRataRentAmount ?? ''} onChange={e => set('proRataRentAmount', e.target.value ? +e.target.value : null)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 4 }}>
