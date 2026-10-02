@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { Box, Typography, Paper, Stepper, Step, StepLabel, Button } from '@mui/material';
+import { Box, Typography, Paper, Stepper, Step, StepLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, MenuItem } from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import EntityFieldStep from '@/components/custom-report/EntityFieldStep';
 import FilterStep from '@/components/custom-report/FilterStep';
 import SortStep from '@/components/custom-report/SortStep';
@@ -26,6 +28,12 @@ export default function CustomReportBuilderPage() {
   const [entities, setEntities] = useState<ReportEntityMeta[]>([]);
   const [fields, setFields] = useState<ReportFieldMeta[]>([]);
   const [config, setConfig] = useState<ReportConfig>({ entity: '', fields: [], filters: [], sort: [] });
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [reportName, setReportName] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => { getReportEntities().then(setEntities).catch(() => {}); }, []);
 
@@ -33,6 +41,36 @@ export default function CustomReportBuilderPage() {
     setConfig({ entity, fields: [], filters: [], sort: [] });
     getReportEntityFields(entity).then(setFields).catch(() => setFields([]));
   }, []);
+
+  const handleSaveReport = async () => {
+    if (!reportName.trim() || !config.entity) return;
+    setSaving(true);
+    try {
+      const response = await fetch('/reports/saved', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: reportName,
+          description: reportDescription || undefined,
+          entity: config.entity,
+          fields: config.fields,
+          filters: config.filters,
+          sort: config.sort,
+          isPublic,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to save report');
+      setMessage({ type: 'success', text: 'Report saved successfully!' });
+      setSaveDialogOpen(false);
+      setReportName('');
+      setReportDescription('');
+      setIsPublic(false);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to save report' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const selectedFields = fields.filter(f => config.fields.includes(f.key));
 
@@ -51,10 +89,19 @@ export default function CustomReportBuilderPage() {
 
   return (
     <Box>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Custom Report Builder</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Pick a data entity, choose fields, filter and sort, then preview and export to PDF or XLSX.
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Custom Report Builder</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Pick a data entity, choose fields, filter and sort, then preview and export to PDF or XLSX.
+          </Typography>
+        </Box>
+        <Button startIcon={<SaveIcon />} variant="outlined" onClick={() => setSaveDialogOpen(true)} disabled={!config.entity || !config.fields.length}>
+          Save Report
+        </Button>
+      </Box>
+
+      {message && <Alert severity={message.type} sx={{ mb: 2 }}>{message.text}</Alert>}
 
       <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
         {STEPS.map(label => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
@@ -90,6 +137,33 @@ export default function CustomReportBuilderPage() {
           Next
         </Button>
       </Box>
+
+      <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Save Report</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <TextField
+            label="Report Name" value={reportName} onChange={e => setReportName(e.target.value)}
+            fullWidth size="small" sx={{ mb: 2 }} required autoFocus
+          />
+          <TextField
+            label="Description" value={reportDescription} onChange={e => setReportDescription(e.target.value)}
+            fullWidth size="small" sx={{ mb: 2 }} multiline rows={2}
+          />
+          <TextField
+            select label="Visibility" value={isPublic ? 'public' : 'private'}
+            onChange={e => setIsPublic(e.target.value === 'public')} fullWidth size="small"
+          >
+            <MenuItem value="private">Private (me only)</MenuItem>
+            <MenuItem value="public">Public (admins can edit)</MenuItem>
+          </TextField>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveReport} variant="contained" disabled={saving || !reportName.trim()}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
