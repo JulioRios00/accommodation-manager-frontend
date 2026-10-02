@@ -19,21 +19,26 @@ export default function ResidentsPage() {
   const { can } = useRole();
   const [residents, setResidents] = useState<Resident[]>([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Resident | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [bedCodeByResident, setBedCodeByResident] = useState<Map<string, string>>(new Map());
+  const [activeResidentIds, setActiveResidentIds] = useState<Set<string>>(new Set());
   const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('residents_col_visibility');
 
   const load = () => getResidents().then(setResidents).catch(() => {});
   const loadBedCodes = () => Promise.all([getBeds(), getBookings('active')]).then(([beds, bookings]) => {
     const bedById = new Map(beds.map(b => [b.id, b]));
     const map = new Map<string, string>();
+    const activeIds = new Set<string>();
     for (const booking of bookings) {
       const bed = bedById.get(booking.bedId);
       if (bed) map.set(booking.residentId, bedCode(bed));
+      activeIds.add(booking.residentId);
     }
     setBedCodeByResident(map);
+    setActiveResidentIds(activeIds);
   }).catch(() => {});
   useEffect(() => { load(); loadBedCodes(); }, []);
 
@@ -91,6 +96,11 @@ export default function ResidentsPage() {
 
   const q = search.toLowerCase();
   const filtered = residents
+    .filter(r => {
+      if (statusFilter === 'active') return activeResidentIds.has(r.id);
+      if (statusFilter === 'inactive') return !activeResidentIds.has(r.id);
+      return true;
+    })
     .filter(r =>
       [r.fullName, r.email, r.telephone, r.nationality, r.personalId, r.source]
         .some(v => v?.toLowerCase().includes(q))
@@ -117,6 +127,17 @@ export default function ResidentsPage() {
           sx={{ width: 340 }}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
         />
+        <ButtonGroup size="small">
+          {(['active', 'inactive', 'all'] as const).map(v => (
+            <Button
+              key={v}
+              variant={statusFilter === v ? 'contained' : 'outlined'}
+              onClick={() => setStatusFilter(v)}
+            >
+              {v === 'active' ? 'Active' : v === 'inactive' ? 'Inactive' : 'All'}
+            </Button>
+          ))}
+        </ButtonGroup>
         <Tooltip title="Reset column layout to default">
           <IconButton size="small" onClick={resetTableLayout}><RestoreIcon fontSize="small" /></IconButton>
         </Tooltip>
