@@ -13,6 +13,11 @@ interface Props {
   onChangeFields: (fields: string[]) => void;
 }
 
+const formatEntityLabel = (label: string) => {
+  if (label === 'Licence Agreements') return 'Bookings';
+  return label;
+};
+
 export default function EntityFieldStep({
   entities, selectedEntity, onSelectEntity, fields, selectedFields, onChangeFields,
 }: Props) {
@@ -29,7 +34,7 @@ export default function EntityFieldStep({
         onChange={e => onSelectEntity(e.target.value as ReportEntityKey)}
         size="small" sx={{ minWidth: 280, mb: 3 }}
       >
-        {entities.map(e => <MenuItem key={e.key} value={e.key}>{e.label}</MenuItem>)}
+        {entities.map(e => <MenuItem key={e.key} value={e.key}>{formatEntityLabel(e.label)}</MenuItem>)}
       </TextField>
 
       {selectedEntity && (

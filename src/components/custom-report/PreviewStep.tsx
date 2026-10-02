@@ -46,15 +46,32 @@ export default function PreviewStep({ fields, request }: Props) {
     }
   };
 
-  const columns: GridColDef[] = fields.map(field => ({
-    field: field.key,
-    headerName: field.label,
-    minWidth: 130,
-    flex: 1,
-    valueFormatter: field.type === 'boolean'
-      ? (value: unknown) => (value ? 'Yes' : 'No')
-      : undefined,
-  }));
+  const columns: GridColDef[] = fields.map(field => {
+    let valueFormatter: ((value: unknown) => string) | undefined;
+
+    if (field.type === 'boolean') {
+      valueFormatter = (value: unknown) => (value ? 'Yes' : 'No');
+    } else if (field.type === 'date') {
+      valueFormatter = (value: unknown) => {
+        if (!value) return '';
+        const date = new Date(value as string);
+        if (isNaN(date.getTime())) return String(value);
+
+        if (field.label === 'Created at') {
+          return date.toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+        return date.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      };
+    }
+
+    return {
+      field: field.key,
+      headerName: field.label,
+      minWidth: 130,
+      flex: 1,
+      valueFormatter,
+    };
+  });
 
   const rows = (result?.rows ?? []).map((row, index) => ({ id: index, ...row }));
 
