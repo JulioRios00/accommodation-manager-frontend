@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField, Alert } from '@mui/material';
 import { LandlordPayment, Property, Landlord, getProperties, getLandlords } from '@/services/api';
 
 type FormState = Omit<LandlordPayment, 'id'>;
@@ -11,10 +11,11 @@ interface Props { open: boolean; initial?: LandlordPayment | null; onClose: () =
 export default function LandlordPaymentDialog({ open, initial, onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
 
-  useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
+  useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); setError(null); }, [initial, open]);
   useEffect(() => {
     if (!open) return;
     getProperties().then(setProperties).catch(() => {});
@@ -22,7 +23,19 @@ export default function LandlordPaymentDialog({ open, initial, onClose, onSave }
   }, [open]);
 
   const set = (f: keyof FormState, v: unknown) => setForm(prev => ({ ...prev, [f]: v === '' ? null : v }));
-  const handleSave = async () => { setSaving(true); try { await onSave(form, initial?.id); onClose(); } finally { setSaving(false); } };
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(form, initial?.id);
+      onClose();
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'Failed to save payment';
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const selectedProperty = properties.find(p => p.id === form.propertyId);
 
@@ -30,6 +43,7 @@ export default function LandlordPaymentDialog({ open, initial, onClose, onSave }
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial ? 'Edit Landlord Payment' : 'New Landlord Payment'}</DialogTitle>
       <DialogContent dividers sx={{ p: 2 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Grid container spacing={2}>
           <Grid size={{ xs: 6 }}>
             <TextField select label="Property" value={form.propertyId} onChange={e => set('propertyId', e.target.value)} fullWidth required size="small">

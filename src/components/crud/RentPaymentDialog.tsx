@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField, Autocomplete } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField, Autocomplete, Alert } from '@mui/material';
 import { RentPayment, Property, Resident, Booking, Bed, getProperties, getResidents, getBookings, getBeds } from '@/services/api';
 import { bedCode } from '@/lib/bedCode';
 
@@ -12,13 +12,14 @@ interface Props { open: boolean; initial?: RentPayment | null; onClose: () => vo
 export default function RentPaymentDialog({ open, initial, onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [residentSearch, setResidentSearch] = useState('');
 
-  useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
+  useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); setError(null); }, [initial, open]);
   useEffect(() => {
     if (!open) return;
     getProperties().then(setProperties).catch(() => {});
@@ -82,7 +83,19 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
     }));
   };
 
-  const handleSave = async () => { setSaving(true); try { await onSave(form, initial?.id); onClose(); } finally { setSaving(false); } };
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(form, initial?.id);
+      onClose();
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'Failed to save payment';
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const bookingLabel = (b: Booking) => {
     const bed = beds.find(bd => bd.id === b.bedId);
@@ -93,6 +106,7 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial ? 'Edit Rent Payment' : 'New Rent Payment'}</DialogTitle>
       <DialogContent dividers sx={{ p: 2 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Grid container spacing={2}>
           <Grid size={{ xs: 6 }}>
             <TextField select label="Property *" value={form.propertyId} onChange={e => handlePropertyChange(e.target.value)} fullWidth size="small">

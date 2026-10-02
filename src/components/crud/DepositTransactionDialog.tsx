@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField, Autocomplete } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField, Autocomplete, Alert } from '@mui/material';
 import { DepositTransaction, Property, Resident, Bed, getProperties, getResidents, getBeds } from '@/services/api';
 import { bedCode } from '@/lib/bedCode';
 
@@ -12,12 +12,13 @@ interface Props { open: boolean; initial?: DepositTransaction | null; onClose: (
 export default function DepositTransactionDialog({ open, initial, onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [residentSearch, setResidentSearch] = useState('');
 
-  useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); }, [initial, open]);
+  useEffect(() => { setForm(initial ? { ...initial } : { ...empty }); setError(null); }, [initial, open]);
   useEffect(() => {
     if (!open) return;
     getProperties().then(setProperties).catch(() => {});
@@ -41,12 +42,25 @@ export default function DepositTransactionDialog({ open, initial, onClose, onSav
     setForm(prev => ({ ...prev, residentId: id, residentName: r?.fullName ?? prev.residentName }));
   };
 
-  const handleSave = async () => { setSaving(true); try { await onSave(form, initial?.id); onClose(); } finally { setSaving(false); } };
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(form, initial?.id);
+      onClose();
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'Failed to save transaction';
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial ? 'Edit Deposit Transaction' : 'New Deposit Transaction'}</DialogTitle>
       <DialogContent dividers sx={{ p: 2 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Grid container spacing={2}>
           <Grid size={{ xs: 4 }}>
             <TextField select label="Type" value={form.type} onChange={e => set('type', e.target.value)} fullWidth size="small">
