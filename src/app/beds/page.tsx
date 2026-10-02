@@ -1,18 +1,23 @@
 'use client';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, ButtonGroup, Tooltip } from '@mui/material';
+import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, ButtonGroup, Tooltip, Divider } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RestoreIcon from '@mui/icons-material/Restore';
 import ViewWeekIcon from '@mui/icons-material/ViewWeek';
+import BedIcon from '@mui/icons-material/Bed';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DoNotDisturbIcon from '@mui/icons-material/DoNotDisturb';
+import RadarIcon from '@mui/icons-material/Radar';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, Bed, Bedroom, Property, Resident } from '@/services/api';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import ColumnReorderDialog from '@/components/shared/ColumnReorderDialog';
 import BedDialog from '@/components/crud/BedDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
+import StatsCard from '@/components/dashboard/StatsCard';
 import { useRole } from '@/hooks/useRole';
 import { useTableState } from '@/hooks/useTableState';
 import { bedCode } from '@/lib/bedCode';
@@ -26,6 +31,8 @@ export default function BedsPage() {
   const [bedrooms, setBedrooms] = useState<Bedroom[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('all');
+  const [cardFilter, setCardFilter] = useState<'total' | 'occupied' | 'empty' | 'onradar' | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bed | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -130,6 +137,14 @@ export default function BedsPage() {
   const q = search.toLowerCase();
   const filtered = beds
     .filter(b => {
+      if (cardFilter === 'occupied') return b.status === 'allocated';
+      if (cardFilter === 'empty') return b.status === 'vacant';
+      if (cardFilter === 'onradar') return false;
+      if (statusFilter === 'active') return b.status === 'allocated';
+      if (statusFilter === 'inactive') return b.status === 'vacant';
+      return true;
+    })
+    .filter(b => {
       const residentName = b.activeBooking?.residentId ? residentMap.get(b.activeBooking.residentId)?.fullName : undefined;
       return [
         bedCode(b),
@@ -156,11 +171,39 @@ export default function BedsPage() {
         )}
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
-        <Chip label={`Total Beds: ${stats.total}`} variant="outlined" size="small" />
-        <Chip label={`Occupied: ${stats.occupied}`} variant="outlined" size="small" />
-        <Chip label={`Empty: ${stats.empty}`} variant="outlined" size="small" />
-        <Chip label={`On Radar: ${stats.onRadar}`} variant="outlined" size="small" />
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 1.5, mb: 2 }}>
+        <StatsCard
+          title="Total Beds"
+          value={stats.total}
+          icon={<BedIcon />}
+          color="#114C5A"
+          onClick={() => setCardFilter(cardFilter === 'total' ? null : 'total')}
+          active={cardFilter === 'total'}
+        />
+        <StatsCard
+          title="Occupied"
+          value={stats.occupied}
+          icon={<CheckCircleIcon />}
+          color="#2e7d32"
+          onClick={() => setCardFilter(cardFilter === 'occupied' ? null : 'occupied')}
+          active={cardFilter === 'occupied'}
+        />
+        <StatsCard
+          title="Empty"
+          value={stats.empty}
+          icon={<DoNotDisturbIcon />}
+          color="#d32f2f"
+          onClick={() => setCardFilter(cardFilter === 'empty' ? null : 'empty')}
+          active={cardFilter === 'empty'}
+        />
+        <StatsCard
+          title="On Radar"
+          value={stats.onRadar}
+          icon={<RadarIcon />}
+          color="#ef6c00"
+          onClick={() => setCardFilter(cardFilter === 'onradar' ? null : 'onradar')}
+          active={cardFilter === 'onradar'}
+        />
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
@@ -172,6 +215,18 @@ export default function BedsPage() {
           sx={{ width: 380 }}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
         />
+        <ButtonGroup size="small">
+          {(['active', 'inactive', 'all'] as const).map(v => (
+            <Button
+              key={v}
+              variant={statusFilter === v ? 'contained' : 'outlined'}
+              onClick={() => setStatusFilter(v)}
+              disabled={cardFilter !== null}
+            >
+              {v === 'active' ? 'Active' : v === 'inactive' ? 'Inactive' : 'All'}
+            </Button>
+          ))}
+        </ButtonGroup>
         <Tooltip title="Reorder columns">
           <IconButton size="small" onClick={() => setColumnReorderOpen(true)}><ViewWeekIcon fontSize="small" /></IconButton>
         </Tooltip>
