@@ -76,7 +76,7 @@ export default function ImportPage() {
     <Box>
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Import Data</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Upload Excel files to bulk-import records. Existing records are updated; new ones are created. Duplicates are skipped.
+        Upload Excel files to bulk-import records. Existing records are updated; new ones are created. Re-uploading a corrected sheet updates the records it already matches.
       </Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
         {imports.map((item) => (

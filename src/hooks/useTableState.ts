@@ -1,28 +1,35 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { GridColumnVisibilityModel, GridColDef, GridSortModel } from '@mui/x-data-grid';
+import { GridColumnVisibilityModel, GridColDef, GridFilterModel, GridSortModel } from '@mui/x-data-grid';
 
 interface TableState {
   columnVisibility: GridColumnVisibilityModel;
   columnOrder: string[];
   columnWidths: Record<string, number>;
   sortModel: GridSortModel;
+  filterModel: GridFilterModel;
 }
 
+const emptyState = (): TableState => ({
+  columnVisibility: {},
+  columnOrder: [],
+  columnWidths: {},
+  sortModel: [],
+  filterModel: { items: [] },
+});
+
 export function useTableState(storageKey: string) {
-  const [state, setState] = useState<TableState>({
-    columnVisibility: {},
-    columnOrder: [],
-    columnWidths: {},
-    sortModel: [],
-  });
+  const [state, setState] = useState<TableState>(emptyState);
 
   // Load state from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
-        setState(JSON.parse(stored));
+        // Merge over the defaults rather than replacing wholesale — a blob saved
+        // before a field was added would otherwise come back undefined and the
+        // DataGrid would reject it as a controlled prop.
+        setState({ ...emptyState(), ...JSON.parse(stored) });
       }
     } catch {
       // Ignore parsing errors
@@ -64,8 +71,15 @@ export function useTableState(storageKey: string) {
     [saveState]
   );
 
+  const handleFilterModelChange = useCallback(
+    (model: GridFilterModel) => {
+      saveState({ filterModel: model });
+    },
+    [saveState]
+  );
+
   const resetTableLayout = useCallback(() => {
-    setState({ columnVisibility: {}, columnOrder: [], columnWidths: {}, sortModel: [] });
+    setState(emptyState());
     try {
       localStorage.removeItem(storageKey);
     } catch {
@@ -129,10 +143,12 @@ export function useTableState(storageKey: string) {
     columnOrder: state.columnOrder,
     columnWidths: state.columnWidths,
     sortModel: state.sortModel,
+    filterModel: state.filterModel,
     handleColumnVisibilityChange,
     handleColumnOrderChange,
     handleColumnWidthChange,
     handleSortModelChange,
+    handleFilterModelChange,
     resetTableLayout,
     applyColumnWidths,
     applyColumnOrder,

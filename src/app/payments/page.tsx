@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Typography, Box, Tabs, Tab, Button, IconButton, TextField, InputAdornment, Chip, MenuItem, Tooltip, ButtonGroup } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -25,6 +25,7 @@ import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { bedCode } from '@/lib/bedCode';
 import { useRole } from '@/hooks/useRole';
 import { useTableState } from '@/hooks/useTableState';
+import { useQueryParamState, useDebouncedQueryParamState } from '@/hooks/useQueryParamState';
 import { useFeatureFlags } from '@/lib/FeatureFlagsProvider';
 
 const statusChip = (v: string) => {
@@ -39,14 +40,23 @@ const MONTHS = [
   { value: '10', label: 'October' }, { value: '11', label: 'November' }, { value: '12', label: 'December' },
 ];
 
-export default function PaymentsPage() {
+/** Tabs are addressed by slug rather than index, so the URL reads
+ *  `?tab=deposits` and reordering the tabs can't change what a saved link means. */
+const TABS = ['rent', 'landlord', 'deposits', 'ledger'] as const;
+type TabSlug = (typeof TABS)[number];
+
+function PaymentsContent() {
   const { can } = useRole();
-  const { isEnabled } = useFeatureFlags();
+  const { isEnabled, loaded: flagsLoaded } = useFeatureFlags();
   const receivablesLedgerEnabled = isEnabled('receivables_ledger');
-  const [tab, setTab] = useState(0);
-  const { columnVisibility: rentColVis, handleColumnVisibilityChange: handleRentColVisChange, resetTableLayout: resetRentLayout, applyColumnWidths: applyRentWidths, columnOrder: rentOrder, handleColumnOrderChange: handleRentOrderChange, applyColumnOrder: applyRentOrder, sortModel: rentSortModel, handleSortModelChange: handleRentSortChange } = useTableState('payments_rent_col_visibility');
-  const { columnVisibility: landlordColVis, handleColumnVisibilityChange: handleLandlordColVisChange, resetTableLayout: resetLandlordLayout, applyColumnWidths: applyLandlordWidths, columnOrder: landlordOrder, handleColumnOrderChange: handleLandlordOrderChange, applyColumnOrder: applyLandlordOrder, sortModel: landlordSortModel, handleSortModelChange: handleLandlordSortChange } = useTableState('payments_landlord_col_visibility');
-  const { columnVisibility: depositsColVis, handleColumnVisibilityChange: handleDepositsColVisChange, resetTableLayout: resetDepositsLayout, applyColumnWidths: applyDepositsWidths, columnOrder: depositsOrder, handleColumnOrderChange: handleDepositsOrderChange, applyColumnOrder: applyDepositsOrder, sortModel: depositsSortModel, handleSortModelChange: handleDepositsSortChange } = useTableState('payments_deposits_col_visibility');
+  const [tabSlug, setTabSlug] = useQueryParamState<TabSlug>('tab', 'rent', TABS);
+  // A link to the ledger shouldn't render a blank page when the flag is off.
+  const activeSlug: TabSlug = tabSlug === 'ledger' && !receivablesLedgerEnabled ? 'rent' : tabSlug;
+  const tab = TABS.indexOf(activeSlug);
+  const setTab = (index: number) => setTabSlug(TABS[index] ?? 'rent');
+  const { columnVisibility: rentColVis, handleColumnVisibilityChange: handleRentColVisChange, resetTableLayout: resetRentLayout, applyColumnWidths: applyRentWidths, columnOrder: rentOrder, handleColumnOrderChange: handleRentOrderChange, applyColumnOrder: applyRentOrder, sortModel: rentSortModel, handleSortModelChange: handleRentSortChange, filterModel: rentFilterModel, handleFilterModelChange: handleRentFilterChange, handleColumnWidthChange: handleRentWidthChange } = useTableState('payments_rent_col_visibility');
+  const { columnVisibility: landlordColVis, handleColumnVisibilityChange: handleLandlordColVisChange, resetTableLayout: resetLandlordLayout, applyColumnWidths: applyLandlordWidths, columnOrder: landlordOrder, handleColumnOrderChange: handleLandlordOrderChange, applyColumnOrder: applyLandlordOrder, sortModel: landlordSortModel, handleSortModelChange: handleLandlordSortChange, filterModel: landlordFilterModel, handleFilterModelChange: handleLandlordFilterChange, handleColumnWidthChange: handleLandlordWidthChange } = useTableState('payments_landlord_col_visibility');
+  const { columnVisibility: depositsColVis, handleColumnVisibilityChange: handleDepositsColVisChange, resetTableLayout: resetDepositsLayout, applyColumnWidths: applyDepositsWidths, columnOrder: depositsOrder, handleColumnOrderChange: handleDepositsOrderChange, applyColumnOrder: applyDepositsOrder, sortModel: depositsSortModel, handleSortModelChange: handleDepositsSortChange, filterModel: depositsFilterModel, handleFilterModelChange: handleDepositsFilterChange, handleColumnWidthChange: handleDepositsWidthChange } = useTableState('payments_deposits_col_visibility');
   const [rentPayments, setRentPayments] = useState<RentPayment[]>([]);
   const [landlordPayments, setLandlordPayments] = useState<LandlordPayment[]>([]);
   const [deposits, setDeposits] = useState<DepositTransaction[]>([]);
@@ -59,13 +69,19 @@ export default function PaymentsPage() {
   const [beds, setBeds] = useState<Bed[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [search, setSearch] = useState('');
-  const [monthFilter, setMonthFilter] = useState('');
-  const [yearFilter, setYearFilter] = useState('');
-  const [landlordMonthFilter, setLandlordMonthFilter] = useState('');
-  const [landlordYearFilter, setLandlordYearFilter] = useState('');
-  const [depositTypeFilter, setDepositTypeFilter] = useState<'receipt' | 'refund' | 'all'>('all');
-  const [depositStatusFilter, setDepositStatusFilter] = useState<'pending' | 'done' | 'all'>('all');
+  // All of these live in the URL: this page unmounts on navigation, so component
+  // state was being lost every time the user visited another section and returned.
+  const [search, setSearch] = useDebouncedQueryParamState('q');
+  const [monthFilter, setMonthFilter] = useQueryParamState<string>('rmonth', '');
+  const [yearFilter, setYearFilter] = useQueryParamState<string>('ryear', '');
+  const [landlordMonthFilter, setLandlordMonthFilter] = useQueryParamState<string>('lmonth', '');
+  const [landlordYearFilter, setLandlordYearFilter] = useQueryParamState<string>('lyear', '');
+  const [depositTypeFilter, setDepositTypeFilter] = useQueryParamState<'receipt' | 'refund' | 'all'>(
+    'dtype', 'all', ['receipt', 'refund', 'all'],
+  );
+  const [depositStatusFilter, setDepositStatusFilter] = useQueryParamState<'pending' | 'done' | 'all'>(
+    'dstatus', 'all', ['pending', 'done', 'all'],
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -80,20 +96,36 @@ export default function PaymentsPage() {
       .catch(() => {});
   };
 
+  // Wait for the flags before the first fetch, so the ledger gate in load() is decided
+  // on real values rather than the provider's optimistic "enabled" default.
   useEffect(() => {
-    getRentPayments().then(setRentPayments).catch(() => {});
-    getLandlordPayments().then(setLandlordPayments).catch(() => {});
-    getDepositTransactions().then(setDeposits).catch(() => {});
-    getReceivablesLedger().then(setLedger).catch(() => {});
-    getDepositRefundQueue().then(setRefundQueue).catch(() => {});
+    if (!flagsLoaded) return;
+    load();
     loadReferenceData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flagsLoaded]);
 
+  /**
+   * Refresh everything after a mutation.
+   *
+   * Each fetch settles on its own and failures are swallowed, because this runs *after*
+   * a save and the dialogs report whatever it throws as a save failure. Two of these
+   * endpoints 403 for perfectly ordinary users — /rent-payments/ledger is gated on the
+   * `receivables_ledger` flag, and /deposit-transactions/refund-queue is restricted to
+   * sysadmin/manager/administrator — so an uncaught Promise.all here surfaced "This
+   * feature is currently disabled" on a save that had already succeeded, and left the
+   * dialog open as though it had not.
+   */
   const load = async () => {
-    const [r, l, d, led, rq] = await Promise.all([
-      getRentPayments(), getLandlordPayments(), getDepositTransactions(), getReceivablesLedger(), getDepositRefundQueue(),
+    const settle = <T,>(p: Promise<T>, apply: (v: T) => void) => p.then(apply).catch(() => {});
+    await Promise.all([
+      settle(getRentPayments(), setRentPayments),
+      settle(getLandlordPayments(), setLandlordPayments),
+      settle(getDepositTransactions(), setDeposits),
+      // Don't even ask for the ledger when the flag is off — it can only 403.
+      receivablesLedgerEnabled ? settle(getReceivablesLedger(), setLedger) : Promise.resolve(),
+      settle(getDepositRefundQueue(), setRefundQueue),
     ]);
-    setRentPayments(r); setLandlordPayments(l); setDeposits(d); setLedger(led); setRefundQueue(rq);
   };
 
   const handleMarkReceived = async () => {
@@ -323,9 +355,13 @@ export default function PaymentsPage() {
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    if (tab === 0) await deleteRentPayment(deleteId);
-    else if (tab === 1) await deleteLandlordPayment(deleteId);
-    else await deleteDepositTransaction(deleteId);
+    // Keyed on the slug rather than the tab index: the ledger tab has no delete
+    // button, and an index-based `else` would have sent its rows to the deposits
+    // endpoint if the tabs were ever reordered.
+    if (activeSlug === 'rent') await deleteRentPayment(deleteId);
+    else if (activeSlug === 'landlord') await deleteLandlordPayment(deleteId);
+    else if (activeSlug === 'deposits') await deleteDepositTransaction(deleteId);
+    else { setDeleteId(null); return; }
     setDeleteId(null);
     await load();
   };
@@ -389,9 +425,9 @@ export default function PaymentsPage() {
         <Tab label="Deposits" />
         {receivablesLedgerEnabled && <Tab label="Receivables Ledger" />}
       </Tabs>
-      {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={rentColVis} onColumnVisibilityModelChange={handleRentColVisChange} sortModel={rentSortModel} onSortModelChange={handleRentSortChange} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
-      {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={landlordColVis} onColumnVisibilityModelChange={handleLandlordColVisChange} sortModel={landlordSortModel} onSortModelChange={handleLandlordSortChange} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
-      {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={depositsColVis} onColumnVisibilityModelChange={handleDepositsColVisChange} sortModel={depositsSortModel} onSortModelChange={handleDepositsSortChange} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={rentColVis} onColumnVisibilityModelChange={handleRentColVisChange} sortModel={rentSortModel} onSortModelChange={handleRentSortChange} filterModel={rentFilterModel} onFilterModelChange={handleRentFilterChange} onColumnWidthChange={(p) => handleRentWidthChange(p.colDef.field, p.width)} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={landlordColVis} onColumnVisibilityModelChange={handleLandlordColVisChange} sortModel={landlordSortModel} onSortModelChange={handleLandlordSortChange} filterModel={landlordFilterModel} onFilterModelChange={handleLandlordFilterChange} onColumnWidthChange={(p) => handleLandlordWidthChange(p.colDef.field, p.width)} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={depositsColVis} onColumnVisibilityModelChange={handleDepositsColVisChange} sortModel={depositsSortModel} onSortModelChange={handleDepositsSortChange} filterModel={depositsFilterModel} onFilterModelChange={handleDepositsFilterChange} onColumnWidthChange={(p) => handleDepositsWidthChange(p.colDef.field, p.width)} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 3 && receivablesLedgerEnabled && <DataGrid rows={ledger} columns={ledgerColumns} getRowId={r => r.paymentId} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 0 && <RentPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateRentPayment(id, data); else await createRentPayment(data); await load(); }} />}
       {tab === 1 && <LandlordPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateLandlordPayment(id, data); else await createLandlordPayment(data); await load(); }} />}
@@ -408,5 +444,15 @@ export default function PaymentsPage() {
         onConfirm={handleMarkRefundComplete} onCancel={() => setMarkRefundCompleteId(null)}
       />
     </Box>
+  );
+}
+
+export default function PaymentsPage() {
+  // useSearchParams bails out of prerendering, so the part of the tree that reads
+  // it needs a Suspense boundary or the production build fails.
+  return (
+    <Suspense fallback={<Typography variant="h5" sx={{ fontWeight: 700 }}>Payments</Typography>}>
+      <PaymentsContent />
+    </Suspense>
   );
 }
