@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
+import StorefrontIcon from '@mui/icons-material/Storefront';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import BedIcon from '@mui/icons-material/Bed';
@@ -44,53 +45,80 @@ import appTheme from '@/theme';
 import { useRole } from '@/hooks/useRole';
 import { PermissionsProvider } from '@/lib/PermissionsProvider';
 import { FeatureFlagsProvider, useFeatureFlags } from '@/lib/FeatureFlagsProvider';
+import { CompanyProfileProvider, useCompanyProfile } from '@/lib/CompanyProfileProvider';
 import type { Section } from '@/lib/permissions';
 import type { FeatureFlagKey } from '@/services/api';
 
 const DRAWER_WIDTH = 220;
 const SIDEBAR_BG = '#424242';
 
-const ALL_NAV_ITEMS: { label: string; href: string; icon: React.ReactNode; section: Section; featureFlag?: FeatureFlagKey }[] = [
-  { label: 'Dashboard',         href: '/dashboard',         icon: <DashboardIcon />,   section: 'Dashboard' },
-  { label: 'Properties',        href: '/properties',        icon: <ApartmentIcon />,   section: 'Properties' },
-  { label: 'Beds',              href: '/beds',              icon: <BedIcon />,         section: 'Beds' },
-  { label: 'Residents',         href: '/residents',         icon: <PeopleIcon />,      section: 'Residents' },
-  { label: 'Bookings',          href: '/bookings',          icon: <BookOnlineIcon />,  section: 'Bookings' },
-  { label: 'Landlords',         href: '/landlords',         icon: <PersonIcon />,      section: 'Landlords' },
-  { label: 'Service Providers', href: '/service-providers', icon: <EngineeringIcon />, section: 'Service Providers' },
-  { label: 'Maintenance',       href: '/maintenance',       icon: <HandymanIcon />,    section: 'Maintenance' },
-  { label: 'Key Log',           href: '/key-logs',          icon: <VpnKeyIcon />,      section: 'Key Log' },
-  { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon />,    section: 'Payments' },
-  { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon />,  section: 'Reports' },
-  { label: 'Custom Reports',    href: '/reports/custom',    icon: <BuildIcon />,       section: 'Custom Reports' },
-  { label: 'Landlord Disbursements', href: '/landlord-disbursements', icon: <AccountBalanceIcon />, section: 'Landlord Disbursements', featureFlag: 'landlord_disbursements' },
-  { label: 'Communication Settings', href: '/communication-settings', icon: <ForumIcon />, section: 'Communication Settings', featureFlag: 'overdue_escalation' },
-  { label: 'Business Units',    href: '/companies',         icon: <BusinessIcon />,    section: 'Companies' },
-  { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      section: 'Import Data' },
-  { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   section: 'User Management' },
-  { label: 'Feature Flags',     href: '/feature-flags',     icon: <ToggleOnIcon />,    section: 'User Management' },
-  { label: 'Activity Log',      href: '/activity-log',      icon: <HistoryIcon />,     section: 'Activity Log' },
+/** `group` drives the dividers in the sidebar; items are rendered in the order below,
+ *  grouped by related area as requested by the stakeholder. */
+const ALL_NAV_ITEMS: { label: string; href: string; icon: React.ReactNode; section: Section; group: number; featureFlag?: FeatureFlagKey }[] = [
+  { label: 'Dashboard',         href: '/dashboard',         icon: <DashboardIcon />,   section: 'Dashboard',         group: 1 },
+
+  { label: 'Bookings',          href: '/bookings',          icon: <BookOnlineIcon />,  section: 'Bookings',          group: 2 },
+  { label: 'Properties',        href: '/properties',        icon: <ApartmentIcon />,   section: 'Properties',        group: 2 },
+  { label: 'Beds',              href: '/beds',              icon: <BedIcon />,         section: 'Beds',              group: 2 },
+  { label: 'Residents',         href: '/residents',         icon: <PeopleIcon />,      section: 'Residents',         group: 2 },
+  { label: 'Landlords',         href: '/landlords',         icon: <PersonIcon />,      section: 'Landlords',         group: 2 },
+
+  { label: 'Maintenance',       href: '/maintenance',       icon: <HandymanIcon />,    section: 'Maintenance',       group: 3 },
+  { label: 'Service Providers', href: '/service-providers', icon: <EngineeringIcon />, section: 'Service Providers', group: 3 },
+  { label: 'Key Log',           href: '/key-logs',          icon: <VpnKeyIcon />,      section: 'Key Log',           group: 3 },
+
+  { label: 'Business Units',    href: '/companies',         icon: <BusinessIcon />,    section: 'Companies',         group: 4 },
+  { label: 'Payments',          href: '/payments',          icon: <PaymentsIcon />,    section: 'Payments',          group: 4 },
+  { label: 'Landlord Disbursements', href: '/landlord-disbursements', icon: <AccountBalanceIcon />, section: 'Landlord Disbursements', group: 4, featureFlag: 'landlord_disbursements' },
+
+  { label: 'Reports',           href: '/reports',           icon: <AssessmentIcon />,  section: 'Reports',           group: 5 },
+  { label: 'Custom Reports',    href: '/reports/custom',    icon: <BuildIcon />,       section: 'Custom Reports',    group: 5 },
+
+  { label: 'Import Data',       href: '/import',            icon: <UploadIcon />,      section: 'Import Data',       group: 6 },
+  { label: 'User Management',   href: '/users',             icon: <PeopleAltIcon />,   section: 'User Management',   group: 6 },
+  { label: 'Feature Flags',     href: '/feature-flags',     icon: <ToggleOnIcon />,    section: 'User Management',   group: 6 },
+  { label: 'Activity Log',      href: '/activity-log',      icon: <HistoryIcon />,     section: 'Activity Log',      group: 6 },
+  { label: 'Communication Settings', href: '/communication-settings', icon: <ForumIcon />, section: 'Communication Settings', group: 6, featureFlag: 'overdue_escalation' },
+  { label: 'Company Profile Setup',  href: '/company-profile',        icon: <StorefrontIcon />, section: 'Company Profile',    group: 6 },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { level } = useRole();
   const { isEnabled } = useFeatureFlags();
+  const { appName, logoDataUrl } = useCompanyProfile();
   const navItems = ALL_NAV_ITEMS.filter(item =>
     level(item.section) !== 'None' && (!item.featureFlag || isEnabled(item.featureFlag)),
   );
   return (
     <>
-      <Box sx={{ p: 2.5, pb: 1.5 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', letterSpacing: 0.5 }}>
-          AccomManager
+      <Box sx={{ p: 2.5, pb: 1.5, display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+        {logoDataUrl && (
+          // Plain <img>: the source is a stored data URL, which next/image can't optimise.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoDataUrl}
+            alt=""
+            style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0, borderRadius: 4 }}
+          />
+        )}
+        <Typography
+          variant="h6"
+          noWrap
+          title={appName}
+          sx={{ fontWeight: 700, color: 'white', letterSpacing: 0.5, minWidth: 0 }}
+        >
+          {appName}
         </Typography>
       </Box>
       <List sx={{ pt: 0.5 }}>
-        {navItems.map((item) => {
+        {navItems.map((item, idx) => {
           const active = pathname === item.href;
+          // Divider wherever the group changes — but never above the first visible
+          // item, since permissions and feature flags can hide a whole group.
+          const startsGroup = idx > 0 && item.group !== navItems[idx - 1].group;
           return (
-            <ListItem key={item.href} disablePadding>
+            <ListItem key={item.href} disablePadding sx={startsGroup ? { mt: 1, pt: 1, borderTop: '1px solid rgba(255,255,255,0.12)' } : undefined}>
               <ListItemButton
                 component={Link}
                 href={item.href}
@@ -222,7 +250,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <CssBaseline />
       <PermissionsProvider>
         <FeatureFlagsProvider>
+          <CompanyProfileProvider>
           <Shell>{children}</Shell>
+          </CompanyProfileProvider>
         </FeatureFlagsProvider>
       </PermissionsProvider>
     </ThemeProvider>

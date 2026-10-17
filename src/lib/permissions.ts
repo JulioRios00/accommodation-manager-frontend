@@ -12,7 +12,7 @@ export const SECTIONS = [
   'Dashboard', 'Properties', 'Beds', 'Residents', 'Bookings', 'Landlords',
   'Service Providers', 'Maintenance', 'Key Log', 'Payments', 'Reports', 'Custom Reports',
   'Communication Settings', 'Landlord Disbursements',
-  'Companies', 'Import Data', 'User Management', 'Activity Log',
+  'Companies', 'Import Data', 'User Management', 'Activity Log', 'Company Profile',
 ] as const;
 
 export type Section = typeof SECTIONS[number];
@@ -43,6 +43,7 @@ const SECTION_BY_KEY = {
   import: 'Import Data',
   user: 'User Management',
   activityLog: 'Activity Log',
+  companyProfile: 'Company Profile',
 } as const satisfies Record<string, Section>;
 
 type SectionKey = keyof typeof SECTION_BY_KEY;
@@ -65,14 +66,14 @@ const VERB_MINIMUM: Record<Verb, AccessLevel> = {
 /** Baseline used whenever a role/section pair has no stored override. */
 export const DEFAULT_MATRIX: Record<UserRole, Record<Section, AccessLevel>> = {
   sysadmin:      buildRow('Full'),
-  manager:       buildRow('Full'),
-  administrator: { ...buildRow('View'), 'Residents': 'View+Edit', 'Import Data': 'None', 'User Management': 'None', 'Custom Reports': 'None', 'Communication Settings': 'None', 'Landlord Disbursements': 'None' },
-  staff:         { ...buildRow('View'), 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None', 'Custom Reports': 'None', 'Communication Settings': 'None', 'Landlord Disbursements': 'None' },
+  manager:       { ...buildRow('Full'), 'Company Profile': 'None' },
+  administrator: { ...buildRow('View'), 'Residents': 'View+Edit', 'Import Data': 'None', 'User Management': 'None', 'Custom Reports': 'None', 'Communication Settings': 'None', 'Landlord Disbursements': 'None', 'Company Profile': 'None' },
+  staff:         { ...buildRow('View'), 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None', 'Custom Reports': 'None', 'Communication Settings': 'None', 'Landlord Disbursements': 'None', 'Company Profile': 'None' },
   maintenance:   {
     ...buildRow('View'),
     'Maintenance': 'View+Edit',
     'Landlords': 'None', 'Payments': 'None', 'Reports': 'None', 'Custom Reports': 'None',
-    'Communication Settings': 'None', 'Landlord Disbursements': 'None',
+    'Communication Settings': 'None', 'Landlord Disbursements': 'None', 'Company Profile': 'None',
     'Companies': 'None', 'Import Data': 'None', 'User Management': 'None', 'Activity Log': 'None',
   },
   resident:      buildRow('None'),

@@ -797,3 +797,14 @@ export const exportCustomReportPdf = (payload: ReportQueryRequest) =>
 export const exportCustomReportXlsx = (payload: ReportQueryRequest) =>
   api.post('/reports/export/xlsx', payload, { responseType: 'blob' }).then(r =>
     downloadBlob(r.data, `${payload.entity}-report.xlsx`, r.headers['content-disposition']));
+
+export interface CompanyProfile {
+  id: string;
+  appName: string;
+  logoDataUrl: string | null;
+  updatedAt: string;
+}
+
+export const getCompanyProfile = () => api.get<CompanyProfile>('/company-profile').then(r => r.data);
+export const updateCompanyProfile = (data: { appName: string; logoDataUrl: string | null }) =>
+  api.put<CompanyProfile>('/company-profile', data).then(r => r.data);
