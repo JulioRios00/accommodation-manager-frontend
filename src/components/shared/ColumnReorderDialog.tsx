@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, List, ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton, Box, Typography } from '@mui/material';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -24,24 +24,33 @@ export default function ColumnReorderDialog({
   onReset,
   onClose,
 }: ColumnReorderDialogProps) {
-  const [localOrder, setLocalOrder] = useState<string[]>(columnOrder);
+  const [localOrder, setLocalOrder] = useState<string[]>([]);
   const [dragging, setDragging] = useState<string | null>(null);
 
-  const orderedColumns = useMemo(() => {
-    if (localOrder.length === 0) return columns;
-    const fieldToCol = new Map(columns.map(col => [col.field, col]));
-    const ordered: GridColDef[] = [];
-
-    for (const field of localOrder) {
-      const col = fieldToCol.get(field);
-      if (col) ordered.push(col);
-    }
-
+  // Seed from the order the grid is actually showing, every time the dialog opens.
+  // `columnOrder` is empty until something has been saved, and useTableState only
+  // loads it from storage in an effect — so initialising state from it once left
+  // localOrder permanently empty, and every move below is a no-op on an empty list.
+  // Keyed on `open` alone: `columns` is a fresh array each render, so depending on
+  // it would reseed mid-edit and discard the user's in-progress reordering.
+  useEffect(() => {
+    if (!open) return;
+    const known = new Set(columns.map(col => col.field));
+    const seeded = columnOrder.filter(field => known.has(field));
     for (const col of columns) {
-      if (!localOrder.includes(col.field)) ordered.push(col);
+      if (!seeded.includes(col.field)) seeded.push(col.field);
     }
+    setLocalOrder(seeded);
+    setDragging(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
-    return ordered;
+  // localOrder is always complete once seeded, so indices here line up with it.
+  const orderedColumns = useMemo(() => {
+    const fieldToCol = new Map(columns.map(col => [col.field, col]));
+    return localOrder
+      .map(field => fieldToCol.get(field))
+      .filter((col): col is GridColDef => col !== undefined);
   }, [columns, localOrder]);
 
   const moveUp = (index: number) => {
@@ -52,7 +61,7 @@ export default function ColumnReorderDialog({
   };
 
   const moveDown = (index: number) => {
-    if (index === localOrder.length - 1) return;
+    if (index >= localOrder.length - 1) return;
     const newOrder = [...localOrder];
     [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
     setLocalOrder(newOrder);

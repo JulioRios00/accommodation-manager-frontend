@@ -56,9 +56,11 @@ export function useTableState(storageKey: string) {
     [saveState]
   );
 
-  const handleColumnOrderChange = useCallback(
-    (params: any) => {
-      const order = params?.model || [];
+  /** Takes the new field order outright. Note the grid cannot drive this: header
+   *  drag-reorder is a MUI X Pro feature and the Community DataGrid force-sets
+   *  `disableColumnReorder: true`, so the order comes from ColumnReorderDialog. */
+  const setColumnOrder = useCallback(
+    (order: string[]) => {
       saveState({ columnOrder: order });
     },
     [saveState]
@@ -145,7 +147,7 @@ export function useTableState(storageKey: string) {
     sortModel: state.sortModel,
     filterModel: state.filterModel,
     handleColumnVisibilityChange,
-    handleColumnOrderChange,
+    setColumnOrder,
     handleColumnWidthChange,
     handleSortModelChange,
     handleFilterModelChange,

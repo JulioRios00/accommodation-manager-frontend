@@ -37,7 +37,7 @@ export default function BedsPage() {
   const [editing, setEditing] = useState<Bed | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [columnReorderOpen, setColumnReorderOpen] = useState(false);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('beds_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, setColumnOrder, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('beds_col_visibility');
 
   const load = () => getBeds().then(setBeds).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -262,7 +262,7 @@ export default function BedsPage() {
         open={columnReorderOpen}
         columns={columns}
         columnOrder={columnOrder}
-        onReorder={(order) => handleColumnOrderChange({ model: order })}
+        onReorder={setColumnOrder}
         onReset={resetTableLayout}
         onClose={() => setColumnReorderOpen(false)}
       />

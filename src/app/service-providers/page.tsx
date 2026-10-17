@@ -21,7 +21,7 @@ export default function ServiceProvidersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceProvider | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('serviceProviders_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('serviceProviders_col_visibility');
 
   const load = () => getServiceProviders().then(setItems).catch(() => {});
   useEffect(() => { load(); }, []);

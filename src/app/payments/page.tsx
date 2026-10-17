@@ -7,6 +7,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RestoreIcon from '@mui/icons-material/Restore';
+import ViewWeekIcon from '@mui/icons-material/ViewWeek';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
@@ -22,10 +23,11 @@ import RentPaymentDialog from '@/components/crud/RentPaymentDialog';
 import LandlordPaymentDialog from '@/components/crud/LandlordPaymentDialog';
 import DepositTransactionDialog from '@/components/crud/DepositTransactionDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
+import ColumnReorderDialog from '@/components/shared/ColumnReorderDialog';
 import { bedCode } from '@/lib/bedCode';
 import { useRole } from '@/hooks/useRole';
 import { useTableState } from '@/hooks/useTableState';
-import { useQueryParamState, useDebouncedQueryParamState } from '@/hooks/useQueryParamState';
+import { useQueryParamState, useDebouncedQueryParamState, useRestoreQueryParams } from '@/hooks/useQueryParamState';
 import { useFeatureFlags } from '@/lib/FeatureFlagsProvider';
 
 const statusChip = (v: string) => {
@@ -49,14 +51,16 @@ function PaymentsContent() {
   const { can } = useRole();
   const { isEnabled, loaded: flagsLoaded } = useFeatureFlags();
   const receivablesLedgerEnabled = isEnabled('receivables_ledger');
+  // Coming back via the sidebar lands on a bare /payments, so reinstate the last view.
+  useRestoreQueryParams('payments');
   const [tabSlug, setTabSlug] = useQueryParamState<TabSlug>('tab', 'rent', TABS);
   // A link to the ledger shouldn't render a blank page when the flag is off.
   const activeSlug: TabSlug = tabSlug === 'ledger' && !receivablesLedgerEnabled ? 'rent' : tabSlug;
   const tab = TABS.indexOf(activeSlug);
   const setTab = (index: number) => setTabSlug(TABS[index] ?? 'rent');
-  const { columnVisibility: rentColVis, handleColumnVisibilityChange: handleRentColVisChange, resetTableLayout: resetRentLayout, applyColumnWidths: applyRentWidths, columnOrder: rentOrder, handleColumnOrderChange: handleRentOrderChange, applyColumnOrder: applyRentOrder, sortModel: rentSortModel, handleSortModelChange: handleRentSortChange, filterModel: rentFilterModel, handleFilterModelChange: handleRentFilterChange, handleColumnWidthChange: handleRentWidthChange } = useTableState('payments_rent_col_visibility');
-  const { columnVisibility: landlordColVis, handleColumnVisibilityChange: handleLandlordColVisChange, resetTableLayout: resetLandlordLayout, applyColumnWidths: applyLandlordWidths, columnOrder: landlordOrder, handleColumnOrderChange: handleLandlordOrderChange, applyColumnOrder: applyLandlordOrder, sortModel: landlordSortModel, handleSortModelChange: handleLandlordSortChange, filterModel: landlordFilterModel, handleFilterModelChange: handleLandlordFilterChange, handleColumnWidthChange: handleLandlordWidthChange } = useTableState('payments_landlord_col_visibility');
-  const { columnVisibility: depositsColVis, handleColumnVisibilityChange: handleDepositsColVisChange, resetTableLayout: resetDepositsLayout, applyColumnWidths: applyDepositsWidths, columnOrder: depositsOrder, handleColumnOrderChange: handleDepositsOrderChange, applyColumnOrder: applyDepositsOrder, sortModel: depositsSortModel, handleSortModelChange: handleDepositsSortChange, filterModel: depositsFilterModel, handleFilterModelChange: handleDepositsFilterChange, handleColumnWidthChange: handleDepositsWidthChange } = useTableState('payments_deposits_col_visibility');
+  const { columnVisibility: rentColVis, handleColumnVisibilityChange: handleRentColVisChange, resetTableLayout: resetRentLayout, applyColumnWidths: applyRentWidths, columnOrder: rentOrder, setColumnOrder: setRentOrder, applyColumnOrder: applyRentOrder, sortModel: rentSortModel, handleSortModelChange: handleRentSortChange, filterModel: rentFilterModel, handleFilterModelChange: handleRentFilterChange, handleColumnWidthChange: handleRentWidthChange } = useTableState('payments_rent_col_visibility');
+  const { columnVisibility: landlordColVis, handleColumnVisibilityChange: handleLandlordColVisChange, resetTableLayout: resetLandlordLayout, applyColumnWidths: applyLandlordWidths, columnOrder: landlordOrder, setColumnOrder: setLandlordOrder, applyColumnOrder: applyLandlordOrder, sortModel: landlordSortModel, handleSortModelChange: handleLandlordSortChange, filterModel: landlordFilterModel, handleFilterModelChange: handleLandlordFilterChange, handleColumnWidthChange: handleLandlordWidthChange } = useTableState('payments_landlord_col_visibility');
+  const { columnVisibility: depositsColVis, handleColumnVisibilityChange: handleDepositsColVisChange, resetTableLayout: resetDepositsLayout, applyColumnWidths: applyDepositsWidths, columnOrder: depositsOrder, setColumnOrder: setDepositsOrder, applyColumnOrder: applyDepositsOrder, sortModel: depositsSortModel, handleSortModelChange: handleDepositsSortChange, filterModel: depositsFilterModel, handleFilterModelChange: handleDepositsFilterChange, handleColumnWidthChange: handleDepositsWidthChange } = useTableState('payments_deposits_col_visibility');
   const [rentPayments, setRentPayments] = useState<RentPayment[]>([]);
   const [landlordPayments, setLandlordPayments] = useState<LandlordPayment[]>([]);
   const [deposits, setDeposits] = useState<DepositTransaction[]>([]);
@@ -85,6 +89,7 @@ function PaymentsContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [columnReorderOpen, setColumnReorderOpen] = useState(false);
 
   const loadReferenceData = () => {
     getProperties().then(setProperties).catch(() => {});
@@ -309,6 +314,16 @@ function PaymentsContent() {
     return applyDepositsOrder(withWidths);
   }, [depositColumns, applyDepositsWidths, applyDepositsOrder]);
 
+  // The reorder dialog acts on whichever grid is currently in front. Header
+  // drag-reorder is Pro-only on the Community DataGrid, so this dialog is the
+  // only way to set the order that applyColumnOrder already persists and applies.
+  const activeTable =
+    activeSlug === 'rent'
+      ? { columns: rentColumnsWithWidthsAndOrder, order: rentOrder, setOrder: setRentOrder, reset: resetRentLayout }
+      : activeSlug === 'landlord'
+        ? { columns: landlordColumnsWithWidthsAndOrder, order: landlordOrder, setOrder: setLandlordOrder, reset: resetLandlordLayout }
+        : { columns: depositColumnsWithWidthsAndOrder, order: depositsOrder, setOrder: setDepositsOrder, reset: resetDepositsLayout };
+
   const q = search.toLowerCase();
   const filteredRent = rentPayments
     .filter(r => !monthFilter || r.month?.slice(5, 7) === monthFilter)
@@ -414,6 +429,7 @@ function PaymentsContent() {
         )}
         <TextField size="small" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
+        {tab !== 3 && <Tooltip title="Reorder columns"><IconButton size="small" onClick={() => setColumnReorderOpen(true)}><ViewWeekIcon fontSize="small" /></IconButton></Tooltip>}
         {tab === 0 && <Tooltip title="Reset column layout to default"><IconButton size="small" onClick={resetRentLayout}><RestoreIcon fontSize="small" /></IconButton></Tooltip>}
         {tab === 1 && <Tooltip title="Reset column layout to default"><IconButton size="small" onClick={resetLandlordLayout}><RestoreIcon fontSize="small" /></IconButton></Tooltip>}
         {tab === 2 && <Tooltip title="Reset column layout to default"><IconButton size="small" onClick={resetDepositsLayout}><RestoreIcon fontSize="small" /></IconButton></Tooltip>}
@@ -432,6 +448,14 @@ function PaymentsContent() {
       {tab === 0 && <RentPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateRentPayment(id, data); else await createRentPayment(data); await load(); }} />}
       {tab === 1 && <LandlordPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateLandlordPayment(id, data); else await createLandlordPayment(data); await load(); }} />}
       {tab === 2 && <DepositTransactionDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateDepositTransaction(id, data); else await createDepositTransaction(data); await load(); }} />}
+      <ColumnReorderDialog
+        open={columnReorderOpen}
+        columns={activeTable.columns}
+        columnOrder={activeTable.order}
+        onReorder={activeTable.setOrder}
+        onReset={activeTable.reset}
+        onClose={() => setColumnReorderOpen(false)}
+      />
       <ConfirmDialog open={!!deleteId} title="Delete Payment" message="This action cannot be undone." onConfirm={handleDelete} onCancel={() => setDeleteId(null)} />
       <ConfirmDialog
         open={!!markReceivedId} title="Mark as Received"

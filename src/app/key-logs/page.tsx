@@ -22,7 +22,7 @@ export default function KeyLogsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<KeyLog | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('keyLogs_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('keyLogs_col_visibility');
 
   const load = () => getKeyLogs().then(setItems).catch(() => {});
   useEffect(() => { load(); }, []);

@@ -21,7 +21,7 @@ export default function LandlordsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Landlord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('landlords_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('landlords_col_visibility');
 
   const load = () => getLandlords().then(setLandlords).catch(() => {});
   useEffect(() => { load(); }, []);

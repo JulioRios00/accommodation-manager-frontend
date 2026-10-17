@@ -105,7 +105,7 @@ export default function MaintenancePage() {
   const canManage = can('maintenance:write');
   const canView = can('maintenance:view');
   const [tab, setTab] = useState(0);
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('maintenance_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('maintenance_col_visibility');
 
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [search, setSearch] = useState('');

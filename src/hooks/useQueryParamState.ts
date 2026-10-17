@@ -57,6 +57,51 @@ export function useQueryParamState<T extends string>(
 }
 
 /**
+ * Restores the last-used query string when the user arrives at a bare URL.
+ *
+ * The sidebar links are static hrefs (`/payments`), so navigating away and back
+ * through the nav lands on a URL with no params and every selection resets —
+ * which is the exact round-trip users complain about. This remembers the last
+ * query string per page and reinstates it when arriving with none.
+ *
+ * Only fires once, on mount: afterwards the user clearing filters back to their
+ * defaults legitimately produces an empty query string, and re-restoring would
+ * fight them. An explicit link with params, a refresh and Back/Forward all keep
+ * whatever the URL says, because they aren't bare.
+ */
+export function useRestoreQueryParams(storageKey: string) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const current = searchParams.toString();
+  const restored = useRef(false);
+  const key = `queryparams:${storageKey}`;
+
+  useEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
+    if (current !== '') return; // arrived with params — they win
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) router.replace(`${pathname}?${saved}`, { scroll: false });
+    } catch {
+      // Private mode / blocked storage — just show the defaults.
+    }
+  }, [current, key, pathname, router]);
+
+  // Remember whatever the URL currently says, including an empty string once the
+  // user has genuinely cleared everything back to defaults.
+  useEffect(() => {
+    if (!restored.current) return;
+    try {
+      localStorage.setItem(key, current);
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [current, key]);
+}
+
+/**
  * As above, but for a text input: the field stays responsive while the URL is
  * only rewritten once typing settles, so a search doesn't push a navigation per
  * keystroke.

@@ -25,7 +25,7 @@ export default function ResidentsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [bedCodeByResident, setBedCodeByResident] = useState<Map<string, string>>(new Map());
   const [activeResidentIds, setActiveResidentIds] = useState<Set<string>>(new Set());
-  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, handleColumnOrderChange, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('residents_col_visibility');
+  const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('residents_col_visibility');
 
   const load = () => getResidents().then(setResidents).catch(() => {});
   const loadBedCodes = () => Promise.all([getBeds(), getBookings('active')]).then(([beds, bookings]) => {
