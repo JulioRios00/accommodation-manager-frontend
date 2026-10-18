@@ -4,6 +4,17 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuIt
 import { RentPayment, Property, Resident, Booking, Bed, getProperties, getResidents, getBookings, getBeds } from '@/services/api';
 import { bedCode } from '@/lib/bedCode';
 
+/** Mirrors derivePaymentStatus in the backend domain
+ *  (backend/src/domain/rent-payment/rent-payment.entity.ts) — the single source of truth
+ *  for what paid / partially paid / unpaid mean. Keep the two in step.
+ *  Note it covers the two cases beyond "equal" and "below": nothing paid is unpaid rather
+ *  than partially paid, and an overpayment still counts as paid. */
+function derivePaymentStatus(amountPaid: number, rentAmount: number): string {
+  if (amountPaid <= 0) return 'unpaid';
+  if (amountPaid < rentAmount) return 'partially_paid';
+  return 'paid';
+}
+
 type FormState = Omit<RentPayment, 'id'>;
 const empty: FormState = { residentId: '', bookingId: '', propertyId: '', month: '', paymentDueDay: null, rentAmount: 0, amountPaid: 0, lateStatus: 'on_time', paymentStatus: 'unpaid', datePaid: null, notes: null };
 
@@ -67,6 +78,22 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
   );
 
   const set = (f: keyof FormState, v: unknown) => setForm(prev => ({ ...prev, [f]: v === '' ? null : v }));
+
+  // Date Paid is the trigger: an amount on its own doesn't mean the money arrived, so the
+  // status is only derived once a payment date is recorded. Applied in the change handlers
+  // rather than an effect, so a status picked by hand survives until the amounts change again.
+  const applyDerivedStatus = (next: FormState): FormState =>
+    next.datePaid
+      ? { ...next, paymentStatus: derivePaymentStatus(Number(next.amountPaid) || 0, Number(next.rentAmount) || 0) }
+      : next;
+
+  const setAndDerive = (f: 'amountPaid' | 'rentAmount' | 'datePaid', v: unknown) =>
+    setForm(prev => applyDerivedStatus({ ...prev, [f]: v === '' ? null : v } as FormState));
+
+  const statusIsDerived =
+    !!form.datePaid &&
+    form.paymentStatus === derivePaymentStatus(Number(form.amountPaid) || 0, Number(form.rentAmount) || 0);
+
 
   const handlePropertyChange = (propertyId: string) => {
     setForm(prev => ({ ...prev, propertyId, residentId: '', bookingId: '', rentAmount: 0 }));
@@ -140,19 +167,24 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
           </Grid>
           <Grid size={{ xs: 6 }}><TextField label="Month (YYYY-MM) *" value={form.month} onChange={e => set('month', e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 6 }}><TextField label="Due Day" type="number" value={form.paymentDueDay ?? ''} onChange={e => set('paymentDueDay', e.target.value ? +e.target.value : null)} fullWidth size="small" /></Grid>
-          <Grid size={{ xs: 4 }}><TextField label="Rent Amount (€)" type="number" value={form.rentAmount} onChange={e => set('rentAmount', +e.target.value)} fullWidth size="small" /></Grid>
-          <Grid size={{ xs: 4 }}><TextField label="Amount Paid (€)" type="number" value={form.amountPaid} onChange={e => set('amountPaid', +e.target.value)} fullWidth size="small" /></Grid>
+          <Grid size={{ xs: 4 }}><TextField label="Rent Amount (€)" type="number" value={form.rentAmount} onChange={e => setAndDerive('rentAmount', +e.target.value)} fullWidth size="small" /></Grid>
+          <Grid size={{ xs: 4 }}><TextField label="Amount Paid (€)" type="number" value={form.amountPaid} onChange={e => setAndDerive('amountPaid', +e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 4 }}>
             <TextField select label="Late Status" value={form.lateStatus} onChange={e => set('lateStatus', e.target.value)} fullWidth size="small">
               {['on_time', 'demand_d1', 'final_demand_d4', 'overdue'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid size={{ xs: 4 }}>
-            <TextField select label="Payment Status" value={form.paymentStatus} onChange={e => set('paymentStatus', e.target.value)} fullWidth size="small">
+            <TextField
+              select label="Payment Status" value={form.paymentStatus}
+              onChange={e => set('paymentStatus', e.target.value)}
+              fullWidth size="small"
+              helperText={statusIsDerived ? 'Set from Amount Paid — override if needed' : ' '}
+            >
               {['unpaid', 'partially_paid', 'paid'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 4 }}><TextField label="Date Paid" type="date" value={form.datePaid ?? ''} onChange={e => set('datePaid', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
+          <Grid size={{ xs: 4 }}><TextField label="Date Paid" type="date" value={form.datePaid ?? ''} onChange={e => setAndDerive('datePaid', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
           <Grid size={{ xs: 12 }}><TextField label="Notes" value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} fullWidth size="small" multiline rows={2} /></Grid>
         </Grid>
       </DialogContent>
