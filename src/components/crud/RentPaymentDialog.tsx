@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField, Autocomplete, Alert } from '@mui/material';
-import { RentPayment, Property, Resident, Booking, Bed, getProperties, getResidents, getBookings, getBeds } from '@/services/api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, MenuItem, TextField, Autocomplete, Alert, Divider, Typography, Table, TableBody, TableCell, TableHead, TableRow, IconButton, Tooltip } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import { RentPayment, Property, Resident, Booking, Bed, RentPaymentInstallment, getProperties, getResidents, getBookings, getBeds, getRentInstallments, addRentInstallment } from '@/services/api';
 import { bedCode } from '@/lib/bedCode';
 
 /** Mirrors derivePaymentStatus in the backend domain
@@ -18,9 +19,17 @@ function derivePaymentStatus(amountPaid: number, rentAmount: number): string {
 type FormState = Omit<RentPayment, 'id'>;
 const empty: FormState = { residentId: '', bookingId: '', propertyId: '', month: '', paymentDueDay: null, rentAmount: 0, amountPaid: 0, lateStatus: 'on_time', paymentStatus: 'unpaid', datePaid: null, notes: null };
 
-interface Props { open: boolean; initial?: RentPayment | null; onClose: () => void; onSave: (data: FormState, id?: string) => Promise<void>; }
+interface Props {
+  open: boolean;
+  initial?: RentPayment | null;
+  onClose: () => void;
+  onSave: (data: FormState, id?: string) => Promise<void>;
+  /** Called when a part payment is recorded. That writes to the server immediately, outside
+   *  the usual Save, so the grid behind the dialog would otherwise show a stale amount. */
+  onChanged?: () => void;
+}
 
-export default function RentPaymentDialog({ open, initial, onClose, onSave }: Props) {
+export default function RentPaymentDialog({ open, initial, onClose, onSave, onChanged }: Props) {
   const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +119,70 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
     }));
   };
 
+  // ---- Part payments -------------------------------------------------------
+  // A rent payment can be settled in instalments. Each one is its own record, so the
+  // history survives even though amountPaid is a single running figure.
+  const [installments, setInstallments] = useState<RentPaymentInstallment[]>([]);
+  const [newAmount, setNewAmount] = useState('');
+  const [newDate, setNewDate] = useState('');
+  const [newNote, setNewNote] = useState('');
+  const [addingPart, setAddingPart] = useState(false);
+  const [partError, setPartError] = useState<string | null>(null);
+
+  const loadInstallments = useCallback(async (paymentId: string) => {
+    try {
+      setInstallments(await getRentInstallments(paymentId));
+    } catch {
+      // History is supporting detail — don't block editing the payment if it can't load.
+      setInstallments([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open || !initial?.id) { setInstallments([]); return; }
+    loadInstallments(initial.id);
+  }, [open, initial?.id, loadInstallments]);
+
+  useEffect(() => {
+    if (!open) return;
+    setNewAmount(''); setNewDate(''); setNewNote(''); setPartError(null);
+  }, [open]);
+
+  const installmentTotal = useMemo(
+    () => installments.reduce((sum, i) => sum + Number(i.amount), 0),
+    [installments],
+  );
+  // amountPaid predates installments on older records, so the two can legitimately
+  // differ. Surface the gap rather than silently reconciling it.
+  const totalsDiffer =
+    installments.length > 0 && Math.abs(installmentTotal - Number(form.amountPaid || 0)) > 0.005;
+
+  const handleAddInstallment = async () => {
+    if (!initial?.id) return;
+    const amount = Number(newAmount);
+    if (!Number.isFinite(amount) || amount <= 0) { setPartError('Enter an amount greater than zero.'); return; }
+    if (!newDate) { setPartError('Enter the date this part payment was received.'); return; }
+
+    setAddingPart(true);
+    setPartError(null);
+    try {
+      await addRentInstallment(initial.id, { amount, paidAt: newDate, notes: newNote.trim() || null });
+      await loadInstallments(initial.id);
+      // Mirror what the server just did, so the form doesn't overwrite it on Save.
+      setForm(prev => applyDerivedStatus({
+        ...prev,
+        amountPaid: Number(prev.amountPaid || 0) + amount,
+        datePaid: prev.datePaid ?? newDate,
+      }));
+      setNewAmount(''); setNewDate(''); setNewNote('');
+      onChanged?.();
+    } catch (err: any) {
+      setPartError(err?.response?.data?.message ?? 'Could not record the part payment.');
+    } finally {
+      setAddingPart(false);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
@@ -186,6 +259,93 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave }: Pr
           </Grid>
           <Grid size={{ xs: 4 }}><TextField label="Date Paid" type="date" value={form.datePaid ?? ''} onChange={e => setAndDerive('datePaid', e.target.value)} fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }} /></Grid>
           <Grid size={{ xs: 12 }}><TextField label="Notes" value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} fullWidth size="small" multiline rows={2} /></Grid>
+
+          <Grid size={{ xs: 12 }}>
+            <Divider sx={{ my: 1 }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Part payments</Typography>
+            {!initial?.id ? (
+              <Typography variant="caption" color="text.secondary">
+                Save this payment first, then part payments can be recorded against it.
+              </Typography>
+            ) : (
+              <>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Each part payment is kept as its own record, so the history survives even though
+                  Amount Paid is a single running figure. Adding one saves immediately and updates
+                  Amount Paid and the status.
+                </Typography>
+
+                {partError && <Alert severity="error" sx={{ mb: 1 }}>{partError}</Alert>}
+                {totalsDiffer && (
+                  <Alert severity="warning" sx={{ mb: 1 }}>
+                    Part payments total €{installmentTotal.toFixed(2)}, but Amount Paid is
+                    €{Number(form.amountPaid || 0).toFixed(2)}. That is expected if some of it was
+                    recorded before part payments were tracked.
+                  </Alert>
+                )}
+
+                {installments.length > 0 && (
+                  <Table size="small" sx={{ mb: 1 }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="right">Amount (€)</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Note</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {installments.map(i => (
+                        <TableRow key={i.id}>
+                          <TableCell>{String(i.paidAt).slice(0, 10)}</TableCell>
+                          <TableCell align="right">{Number(i.amount).toFixed(2)}</TableCell>
+                          <TableCell>{i.notes ?? ''}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700 }}>Total</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="right">{installmentTotal.toFixed(2)}</TableCell>
+                        <TableCell />
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                )}
+
+                <Grid container spacing={1} sx={{ alignItems: 'center' }}>
+                  <Grid size={{ xs: 3 }}>
+                    <TextField
+                      label="Date" type="date" value={newDate} onChange={e => setNewDate(e.target.value)}
+                      fullWidth size="small" slotProps={{ inputLabel: { shrink: true } }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 3 }}>
+                    <TextField
+                      label="Amount (€)" type="number" value={newAmount}
+                      onChange={e => setNewAmount(e.target.value)} fullWidth size="small"
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 5 }}>
+                    <TextField
+                      label="Note (optional)" value={newNote}
+                      onChange={e => setNewNote(e.target.value)} fullWidth size="small"
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 1 }}>
+                    <Tooltip title="Record part payment">
+                      <span>
+                        <IconButton
+                          color="primary"
+                          onClick={handleAddInstallment}
+                          disabled={addingPart || !newAmount || !newDate}
+                        >
+                          <AddIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Grid>
+                </Grid>
+              </>
+            )}
+          </Grid>
         </Grid>
       </DialogContent>
       <DialogActions>
