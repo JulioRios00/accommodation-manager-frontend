@@ -507,8 +507,19 @@ export const getRentPayments = (params?: { propertyId?: string; month?: string; 
 export const createRentPayment = (data: Omit<RentPayment, 'id'>) => api.post<RentPayment>('/rent-payments', data).then(r => r.data);
 export const updateRentPayment = (id: string, data: Partial<RentPayment>) => api.put<RentPayment>(`/rent-payments/${id}`, data).then(r => r.data);
 export const deleteRentPayment = (id: string) => api.delete(`/rent-payments/${id}`);
+export interface RentPaymentInstallment {
+  id: string;
+  rentPaymentId: string;
+  amount: number;
+  paidAt: string;
+  notes: string | null;
+  createdAt: string;
+}
+
 export const addRentInstallment = (rentPaymentId: string, data: { amount: number; paidAt: string; notes?: string | null }) =>
-  api.post(`/rent-payments/${rentPaymentId}/installments`, data).then(r => r.data);
+  api.post<RentPaymentInstallment>(`/rent-payments/${rentPaymentId}/installments`, data).then(r => r.data);
+export const getRentInstallments = (rentPaymentId: string) =>
+  api.get<RentPaymentInstallment[]>(`/rent-payments/${rentPaymentId}/installments`).then(r => r.data);
 
 // UC-501: Receivables ledger + escalation
 export interface ReceivablesLedgerRow {
