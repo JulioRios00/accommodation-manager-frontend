@@ -3,11 +3,43 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, TextField, MenuItem, Button, Chip,
 } from '@mui/material';
+import Link from 'next/link';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getAuditLogs, getUsers, AuditLog, ClerkUser } from '@/services/api';
+
+/** Where to send someone who wants to see the record an entry changed.
+ *  The target pages locate records by searching their visible text, so these link by
+ *  name/code rather than by id — and force status=all, because Properties defaults to
+ *  Active and a link to an archived one would otherwise land on an empty list. */
+function recordLinks(log: AuditLog): { label: string; href: string }[] {
+  const l = log.entityLinks ?? {};
+  const links: { label: string; href: string }[] = [];
+  const q = (v: string) => encodeURIComponent(v);
+
+  if (l.residentName) links.push({ label: l.residentName, href: `/residents?q=${q(l.residentName)}&status=all` });
+  if (l.propertyCode) links.push({ label: l.propertyCode, href: `/properties?q=${q(l.propertyCode)}&status=all` });
+
+  // The payment itself, on the tab it lives on — the Payments search already matches
+  // resident name, property code and month.
+  const payments = (tab: string, term?: string) =>
+    term ? `/payments?tab=${tab}&q=${q(term)}` : `/payments?tab=${tab}`;
+  if (log.entityType === 'RentPayment' && l.residentName) {
+    links.push({ label: 'Payment', href: payments('rent', l.residentName) });
+  }
+  if (log.entityType === 'LandlordPayment' && l.propertyCode) {
+    links.push({ label: 'Payment', href: payments('landlord', l.propertyCode) });
+  }
+  if (log.entityType === 'DepositTransaction' && l.residentName) {
+    links.push({ label: 'Deposit', href: payments('deposits', l.residentName) });
+  }
+  if (log.entityType === 'Booking' && l.residentName) {
+    links.push({ label: 'Booking', href: `/bookings?q=${q(l.residentName)}` });
+  }
+  return links;
+}
 
 const ENTITY_TYPES = ['Booking', 'Resident', 'Property', 'Bed', 'RentPayment', 'LandlordPayment', 'CustomReport'];
 
@@ -141,11 +173,30 @@ export default function ActivityLogPage() {
       valueGetter: (_v, row) => (row as AuditLog).entityLabel ?? '',
       renderCell: (params) => {
         const log = params.row as AuditLog;
-        return log.entityLabel
-          ? <span>{log.entityLabel}</span>
-          : <Typography variant="caption" color="text.secondary" title={log.entityId}>
+        const links = recordLinks(log);
+        if (!log.entityLabel && links.length === 0) {
+          return (
+            <Typography variant="caption" color="text.secondary" title={log.entityId}>
               deleted · {log.entityId.slice(0, 8)}
-            </Typography>;
+            </Typography>
+          );
+        }
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', py: 0.5 }}>
+            {links.map(link => (
+              <Chip
+                key={link.href}
+                component={Link}
+                href={link.href}
+                label={link.label}
+                size="small"
+                variant="outlined"
+                clickable
+              />
+            ))}
+            {links.length === 0 && <span>{log.entityLabel}</span>}
+          </Box>
+        );
       },
     },
     { field: 'entityId', headerName: 'Entity ID', width: 130 },

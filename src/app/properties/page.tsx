@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { Typography, Box, Button, ButtonGroup, Chip, IconButton, TextField, InputAdornment, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -17,22 +17,26 @@ import { getProperties, getBeds, getBedrooms, getLandlords, createProperty, upda
 import PropertyDialog from '@/components/crud/PropertyDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { useQueryParamState, useDebouncedQueryParamState, useRestoreQueryParams } from '@/hooks/useQueryParamState';
 
 const COL_VIS_KEY = 'properties_col_visibility';
 
-export default function PropertiesPage() {
+function PropertiesPageContent() {
   const { can, role } = useRole();
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [bedrooms, setBedrooms] = useState<Bedroom[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
-  const [search, setSearch] = useState('');
+  // URL-backed so the Activity Log can link straight to a record, and so the
+  // filter survives navigating away and back.
+  useRestoreQueryParams('properties');
+  const [search, setSearch] = useDebouncedQueryParamState('q');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [hardDeleteId, setHardDeleteId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
+  const [statusFilter, setStatusFilter] = useQueryParamState<'active' | 'inactive' | 'all'>('status', 'active', ['active', 'inactive', 'all']);
 
   // Column visibility persistence
   const [columnVisibility, setColumnVisibility] = useState<GridColumnVisibilityModel>({});
@@ -284,5 +288,15 @@ export default function PropertiesPage() {
         onCancel={() => setHardDeleteId(null)}
       />
     </Box>
+  );
+}
+
+export default function PropertiesPage() {
+  // useSearchParams bails out of prerendering, so the tree that reads it needs a
+  // Suspense boundary or the production build fails.
+  return (
+    <Suspense fallback={null}>
+      <PropertiesPageContent />
+    </Suspense>
   );
 }

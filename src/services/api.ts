@@ -750,9 +750,12 @@ export interface AuditLog {
   /** Ids of the related records, for linking through from the log. */
   entityLinks: {
     residentId?: string;
+    residentName?: string;
     propertyId?: string;
+    propertyCode?: string;
     bookingId?: string;
     bedId?: string;
+    bedCode?: string;
     landlordId?: string;
   };
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useState, useMemo } from 'react';
 import { Typography, Box, Button, IconButton, TextField, InputAdornment, ButtonGroup, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -12,14 +12,18 @@ import { getResidents, createResident, updateResident, deleteResident, getBeds, 
 import ResidentDialog from '@/components/crud/ResidentDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { useQueryParamState, useDebouncedQueryParamState, useRestoreQueryParams } from '@/hooks/useQueryParamState';
 import { useTableState } from '@/hooks/useTableState';
 import { bedCode } from '@/lib/bedCode';
 
-export default function ResidentsPage() {
+function ResidentsPageContent() {
   const { can } = useRole();
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('all');
+  // URL-backed so the Activity Log can link straight to a record, and so the
+  // filter survives navigating away and back.
+  useRestoreQueryParams('residents');
+  const [search, setSearch] = useDebouncedQueryParamState('q');
+  const [statusFilter, setStatusFilter] = useQueryParamState<'active' | 'inactive' | 'all'>('status', 'all', ['active', 'inactive', 'all']);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Resident | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -181,5 +185,15 @@ export default function ResidentsPage() {
         onCancel={() => setDeleteId(null)}
       />
     </Box>
+  );
+}
+
+export default function ResidentsPage() {
+  // useSearchParams bails out of prerendering, so the tree that reads it needs a
+  // Suspense boundary or the production build fails.
+  return (
+    <Suspense fallback={null}>
+      <ResidentsPageContent />
+    </Suspense>
   );
 }

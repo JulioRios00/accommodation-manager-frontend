@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Box, Button, Chip, IconButton, ToggleButton, ToggleButtonGroup, TextField, InputAdornment, Tooltip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
@@ -19,6 +19,7 @@ import {
 import BookingDialog from '@/components/crud/BookingDialog';
 import ConfirmDialog from '@/components/crud/ConfirmDialog';
 import { useRole } from '@/hooks/useRole';
+import { useQueryParamState, useDebouncedQueryParamState, useRestoreQueryParams } from '@/hooks/useQueryParamState';
 import { bedCode } from '@/lib/bedCode';
 
 const COL_VIS_KEY = 'bookings_col_visibility';
@@ -37,7 +38,7 @@ function bedLabel(b: Booking) {
 const statusColor = (s: string) =>
   s === 'active' ? 'success' : s === 'upcoming' ? 'warning' : 'default';
 
-export default function BookingsPage() {
+function BookingsPageContent() {
   const router = useRouter();
   const { can } = useRole();
   const canEdit = can('booking:edit');
@@ -49,7 +50,10 @@ export default function BookingsPage() {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [filter, setFilter] = useState('');
-  const [search, setSearch] = useState('');
+  // URL-backed so the Activity Log can link straight to a record, and so the
+  // filter survives navigating away and back.
+  useRestoreQueryParams('bookings');
+  const [search, setSearch] = useDebouncedQueryParamState('q');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Booking | null>(null);
   const [readOnly, setReadOnly] = useState(false);
@@ -254,5 +258,15 @@ export default function BookingsPage() {
         onCancel={() => setDeleteId(null)}
       />
     </Box>
+  );
+}
+
+export default function BookingsPage() {
+  // useSearchParams bails out of prerendering, so the tree that reads it needs a
+  // Suspense boundary or the production build fails.
+  return (
+    <Suspense fallback={null}>
+      <BookingsPageContent />
+    </Suspense>
   );
 }
