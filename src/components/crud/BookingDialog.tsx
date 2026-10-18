@@ -1,14 +1,23 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
+  Autocomplete, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
   FormControlLabel, Grid, MenuItem, TextField, Radio, RadioGroup, FormControl,
-  FormLabel, DialogContentText,
+  FormLabel, DialogContentText, createFilterOptions,
 } from '@mui/material';
 import { Booking, Bed, Resident, Property } from '@/services/api';
 import { bedCode } from '@/lib/bedCode';
 
 type RentChangeScope = 'payment' | 'period' | 'bed';
+
+const residentLabel = (r: Resident) => (r.email ? `${r.fullName} — ${r.email}` : r.fullName);
+
+/** Matches on name and email, and caps how many options are rendered at once — the
+ *  resident list grows without bound and the browser shouldn't paint all of it. */
+const filterResidents = createFilterOptions<Resident>({
+  limit: 50,
+  stringify: residentLabel,
+});
 
 type FormState = {
   bedId: string;
@@ -89,6 +98,19 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
     () => form.propertyId ? beds.filter(b => b.propertyId === form.propertyId) : beds,
     [beds, form.propertyId],
   );
+
+  // GET /residents comes back in insertion order, which is what made the old dropdown
+  // scroll-only and unscannable. Sorted here rather than in the API so no other page's
+  // ordering changes.
+  const sortedResidents = useMemo(
+    () => [...residents].sort((a, b) => a.fullName.localeCompare(b.fullName)),
+    [residents],
+  );
+  const selectedResident = useMemo(
+    () => residents.find(r => r.id === form.residentId) ?? null,
+    [residents, form.residentId],
+  );
+  const missingResident = !!form.residentId && !selectedResident;
 
   // Available beds: vacant, OR the current bed when editing, OR bed where current resident's
   // contractEndDate <= check-in date (same-day checkin after checkout is allowed)
@@ -197,11 +219,47 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
             </TextField>
           </Grid>
           <Grid size={{ xs: 12 }}>
-            <TextField select label="Resident *" value={form.residentId} onChange={e => set('residentId', e.target.value)} fullWidth required size="small" disabled={readOnly}>
-              {residents.map(r => (
-                <MenuItem key={r.id} value={r.id}>{r.fullName} {r.email ? `— ${r.email}` : ''}</MenuItem>
-              ))}
-            </TextField>
+            <Autocomplete
+              options={sortedResidents}
+              value={selectedResident}
+              onChange={(_e, value) => set('residentId', value?.id ?? '')}
+              getOptionLabel={r => residentLabel(r)}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterOptions={filterResidents}
+              disabled={readOnly}
+              autoHighlight
+              fullWidth
+              size="small"
+              noOptionsText="No matching resident"
+              renderInput={params => (
+                <TextField
+                  {...params}
+                  label="Resident *"
+                  required
+                  // `required` alone wouldn't flag an emptied Autocomplete, since the text
+                  // input isn't the value — the Save button is still the real guard.
+                  error={!form.residentId}
+                  helperText={
+                    !form.residentId
+                      ? 'Type to search by name or email'
+                      // The API only returns active residents, so a booking whose resident was
+                      // since deactivated shows a blank field. Say so, rather than letting it
+                      // look like the booking lost its resident.
+                      : missingResident
+                        ? 'This booking\u2019s resident is no longer active. Leave as is to keep them, or pick another.'
+                        : ' '
+                  }
+                />
+              )}
+              renderOption={(props, r) => {
+                const { key, ...rest } = props as typeof props & { key: string };
+                return (
+                  <li key={key} {...rest}>
+                    {residentLabel(r)}
+                  </li>
+                );
+              }}
+            />
           </Grid>
           <Grid size={{ xs: 4 }}>
             <TextField select label="Status" value={form.status} onChange={e => set('status', e.target.value)} fullWidth required size="small" disabled={readOnly}>
