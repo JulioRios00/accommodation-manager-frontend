@@ -744,6 +744,17 @@ export interface AuditLog {
   entityId: string;
   changes: AuditFieldChange[];
   createdAt: string;
+  /** Human-readable name of the record this entry describes, resolved server-side.
+   *  Null when the record has since been deleted. */
+  entityLabel: string | null;
+  /** Ids of the related records, for linking through from the log. */
+  entityLinks: {
+    residentId?: string;
+    propertyId?: string;
+    bookingId?: string;
+    bedId?: string;
+    landlordId?: string;
+  };
 }
 export const getAuditLogs = (params?: { userId?: string; entityType?: string; dateFrom?: string; dateTo?: string }) =>
   api.get<AuditLog[]>('/audit-logs', { params }).then(r => r.data);
