@@ -134,6 +134,20 @@ export default function ActivityLogPage() {
       ),
     },
     { field: 'entityType', headerName: 'Entity', width: 110 },
+    {
+      // The whole point of this column: an entity type plus a uuid tells you something
+      // changed but not where to find it. Falls back to the id when the record is gone.
+      field: 'entityLabel', headerName: 'Record', minWidth: 220, flex: 1,
+      valueGetter: (_v, row) => (row as AuditLog).entityLabel ?? '',
+      renderCell: (params) => {
+        const log = params.row as AuditLog;
+        return log.entityLabel
+          ? <span>{log.entityLabel}</span>
+          : <Typography variant="caption" color="text.secondary" title={log.entityId}>
+              deleted · {log.entityId.slice(0, 8)}
+            </Typography>;
+      },
+    },
     { field: 'entityId', headerName: 'Entity ID', width: 130 },
     {
       field: 'changes', headerName: 'Changes', minWidth: 320, flex: 1,
