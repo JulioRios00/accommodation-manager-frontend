@@ -8,7 +8,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RestoreIcon from '@mui/icons-material/Restore';
 import ViewWeekIcon from '@mui/icons-material/ViewWeek';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridFilterModel } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import {
   getRentPayments, createRentPayment, updateRentPayment, deleteRentPayment, RentPayment,
@@ -33,6 +33,51 @@ import { useFeatureFlags } from '@/lib/FeatureFlagsProvider';
 const statusChip = (v: string) => {
   const color = v === 'paid' || v === 'done' ? 'success' : v === 'partial' || v === 'partially_paid' ? 'warning' : 'default';
   return <Chip label={v} color={color as any} size="small" />;
+};
+
+/** The status columns hold a small, fixed vocabulary, so they are declared as
+ *  singleSelect: the filter panel then offers "is / is not / is any of" backed by a
+ *  dropdown of the real values, instead of free text.
+ *
+ *  The default 'contains' operator is actively misleading on these columns. Every
+ *  payment status ends in "paid" — paid, unpaid, partially_paid — so `contains "paid"`
+ *  matches every row, which reads as a filter that does nothing. */
+const PAYMENT_STATUSES = ['unpaid', 'partially_paid', 'paid'];
+const LATE_STATUSES = ['on_time', 'demand_d1', 'final_demand_d4', 'overdue'];
+const LANDLORD_STATUSES = ['pending', 'partial', 'paid'];
+const DEPOSIT_STATUSES = ['pending', 'done'];
+const DEPOSIT_TYPES = ['receipt', 'refund'];
+
+/** The known values, plus whatever the rows actually hold. Imported data has carried
+ *  unexpected statuses before; one of those must still be selectable, or the rows
+ *  holding it silently become unfilterable. */
+const statusOptions = (known: string[], rows: unknown[], field: string): string[] => {
+  const seen = rows
+    .map(r => (r as Record<string, unknown>)?.[field])
+    .filter((v): v is string => typeof v === 'string' && v !== '');
+  return Array.from(new Set([...known, ...seen]));
+};
+
+const statusColumn = (
+  field: string, headerName: string, width: number, options: string[],
+): GridColDef => ({
+  field, headerName, width,
+  type: 'singleSelect',
+  valueOptions: options,
+  renderCell: (p) => statusChip(p.value as string),
+});
+
+/** Filter models are persisted, so one saved before these columns became singleSelect
+ *  still names a text operator the grid will not accept for that column type. Drop just
+ *  those items — a stale entry in localStorage must not break the filter panel. */
+const SELECT_OPERATORS = new Set(['is', 'not', 'isAnyOf']);
+const pruneStaleFilters = (model: GridFilterModel, columns: GridColDef[]): GridFilterModel => {
+  const selectFields = new Set(columns.filter(c => c.type === 'singleSelect').map(c => c.field));
+  const items = model.items.filter(
+    i => !(selectFields.has(i.field) && i.operator && !SELECT_OPERATORS.has(i.operator)),
+  );
+  // Same reference when nothing changed: the grid treats filterModel as controlled state.
+  return items.length === model.items.length ? model : { ...model, items };
 };
 
 const MONTHS = [
@@ -178,8 +223,8 @@ function PaymentsContent() {
     { field: 'rentAmount', headerName: 'Rent (€)', width: 100, type: 'number' },
     { field: 'amountPaid', headerName: 'Paid (€)', width: 100, type: 'number' },
     { field: 'paymentDueDay', headerName: 'Rent Due Day', width: 110, type: 'number' },
-    { field: 'lateStatus', headerName: 'Late Status', width: 130, renderCell: (p) => statusChip(p.value as string) },
-    { field: 'paymentStatus', headerName: 'Payment Status', width: 130, renderCell: (p) => statusChip(p.value as string) },
+    statusColumn('lateStatus', 'Late Status', 130, statusOptions(LATE_STATUSES, rentPayments, 'lateStatus')),
+    statusColumn('paymentStatus', 'Payment Status', 130, statusOptions(PAYMENT_STATUSES, rentPayments, 'paymentStatus')),
     { field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => <Box>
         {can('payment:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
@@ -213,7 +258,7 @@ function PaymentsContent() {
       valueGetter: (_v, row) => propertyById.get((row as LandlordPayment).propertyId)?.paymentReference ?? '',
     },
     { field: 'notes', headerName: 'Notes', minWidth: 160, flex: 1 },
-    { field: 'status', headerName: 'Status', width: 110, renderCell: (p) => statusChip(p.value as string) },
+    statusColumn('status', 'Status', 110, statusOptions(LANDLORD_STATUSES, landlordPayments, 'status')),
     { field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => <Box>
         {can('payment:edit') && <IconButton size="small" onClick={() => { setEditing(params.row); setDialogOpen(true); }}><EditIcon fontSize="small" /></IconButton>}
@@ -256,7 +301,11 @@ function PaymentsContent() {
   ];
 
   const depositColumns: GridColDef[] = [
-    { field: 'type', headerName: 'Type', width: 90, renderCell: (p) => <Chip label={p.value} color={p.value === 'refund' ? 'warning' : 'success'} size="small" /> },
+    {
+      field: 'type', headerName: 'Type', width: 90,
+      type: 'singleSelect', valueOptions: statusOptions(DEPOSIT_TYPES, deposits, 'type'),
+      renderCell: (p) => <Chip label={p.value} color={p.value === 'refund' ? 'warning' : 'success'} size="small" />,
+    },
     { field: 'residentName', headerName: 'Resident', minWidth: 160, flex: 1 },
     {
       field: 'propertyCode', headerName: 'Property Code', width: 120,
@@ -288,7 +337,7 @@ function PaymentsContent() {
       },
     },
     { field: 'comments', headerName: 'Comments', minWidth: 160, flex: 1 },
-    { field: 'status', headerName: 'Status', width: 100, renderCell: (p) => statusChip(p.value as string) },
+    statusColumn('status', 'Status', 100, statusOptions(DEPOSIT_STATUSES, deposits, 'status')),
     { field: 'dateProcessed', headerName: 'Processed', width: 120 },
     { field: 'actions', headerName: '', width: 90, sortable: false,
       renderCell: (params) => (
@@ -441,9 +490,9 @@ function PaymentsContent() {
         <Tab label="Deposits" />
         {receivablesLedgerEnabled && <Tab label="Receivables Ledger" />}
       </Tabs>
-      {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={rentColVis} onColumnVisibilityModelChange={handleRentColVisChange} sortModel={rentSortModel} onSortModelChange={handleRentSortChange} filterModel={rentFilterModel} onFilterModelChange={handleRentFilterChange} onColumnWidthChange={(p) => handleRentWidthChange(p.colDef.field, p.width)} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
-      {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={landlordColVis} onColumnVisibilityModelChange={handleLandlordColVisChange} sortModel={landlordSortModel} onSortModelChange={handleLandlordSortChange} filterModel={landlordFilterModel} onFilterModelChange={handleLandlordFilterChange} onColumnWidthChange={(p) => handleLandlordWidthChange(p.colDef.field, p.width)} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
-      {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={depositsColVis} onColumnVisibilityModelChange={handleDepositsColVisChange} sortModel={depositsSortModel} onSortModelChange={handleDepositsSortChange} filterModel={depositsFilterModel} onFilterModelChange={handleDepositsFilterChange} onColumnWidthChange={(p) => handleDepositsWidthChange(p.colDef.field, p.width)} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 0 && <DataGrid rows={filteredRent} columns={rentColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={rentColVis} onColumnVisibilityModelChange={handleRentColVisChange} sortModel={rentSortModel} onSortModelChange={handleRentSortChange} filterModel={pruneStaleFilters(rentFilterModel, rentColumnsWithWidthsAndOrder)} onFilterModelChange={handleRentFilterChange} onColumnWidthChange={(p) => handleRentWidthChange(p.colDef.field, p.width)} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 1 && <DataGrid rows={filteredLandlord} columns={landlordColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={landlordColVis} onColumnVisibilityModelChange={handleLandlordColVisChange} sortModel={landlordSortModel} onSortModelChange={handleLandlordSortChange} filterModel={pruneStaleFilters(landlordFilterModel, landlordColumnsWithWidthsAndOrder)} onFilterModelChange={handleLandlordFilterChange} onColumnWidthChange={(p) => handleLandlordWidthChange(p.colDef.field, p.width)} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
+      {tab === 2 && <DataGrid rows={filteredDeposits} columns={depositColumnsWithWidthsAndOrder} getRowId={r => r.id} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} columnVisibilityModel={depositsColVis} onColumnVisibilityModelChange={handleDepositsColVisChange} sortModel={depositsSortModel} onSortModelChange={handleDepositsSortChange} filterModel={pruneStaleFilters(depositsFilterModel, depositColumnsWithWidthsAndOrder)} onFilterModelChange={handleDepositsFilterChange} onColumnWidthChange={(p) => handleDepositsWidthChange(p.colDef.field, p.width)} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 3 && receivablesLedgerEnabled && <DataGrid rows={ledger} columns={ledgerColumns} getRowId={r => r.paymentId} autoHeight disableRowSelectionOnClick pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }} slots={{ footer: CustomGridFooter }} slotProps={{ footer: { pageSizeOptions: [25, 50] } }} />}
       {tab === 0 && <RentPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onChanged={load} onSave={async (data, id) => { if (id) await updateRentPayment(id, data); else await createRentPayment(data); await load(); }} />}
       {tab === 1 && <LandlordPaymentDialog open={dialogOpen} initial={editing} onClose={() => setDialogOpen(false)} onSave={async (data, id) => { if (id) await updateLandlordPayment(id, data); else await createLandlordPayment(data); await load(); }} />}
