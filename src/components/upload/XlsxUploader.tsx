@@ -1,8 +1,13 @@
 'use client';
 import { useState, useRef } from 'react';
-import { Box, Typography, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Button } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import { importXlsx, startImportJob, getImportJobStatus } from '@/services/api';
+import DownloadIcon from '@mui/icons-material/Download';
+import {
+  importXlsx, startImportJob, getImportJobStatus,
+  downloadImportIssueReport, downloadImportIssueReportFor,
+  type ImportSkipReason,
+} from '@/services/api';
 
 interface XlsxUploaderProps {
   onImported?: () => void;
@@ -21,6 +26,11 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export default function XlsxUploader({ onImported, endpoint, label, accept = '.xlsx,.xlsm', background }: XlsxUploaderProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // How to fetch the "what didn't import" file for the run just finished. A job id when the
+  // import ran in the background, the returned result when it answered directly — null when
+  // every row went in, so the button only appears if there is something to look at.
+  const [issues, setIssues] = useState<{ jobId: string } | { result: { message?: string; skipReasons?: ImportSkipReason[] } } | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileAsync = async (file: File) => {
@@ -30,6 +40,8 @@ export default function XlsxUploader({ onImported, endpoint, label, accept = '.x
       const job = await getImportJobStatus(jobId, endpoint);
       if (job.status === 'completed') {
         setMessage({ type: 'success', text: job.result?.message ?? 'Import complete.' });
+        const skipped = (job.result?.skipReasons as ImportSkipReason[] | undefined) ?? [];
+        if (skipped.length) setIssues({ jobId });
         onImported?.();
         return;
       }
@@ -43,18 +55,34 @@ export default function XlsxUploader({ onImported, endpoint, label, accept = '.x
   const handleFile = async (file: File) => {
     setLoading(true);
     setMessage(null);
+    setIssues(null);
     try {
       if (background) {
         await handleFileAsync(file);
       } else {
         const result = await importXlsx(file, endpoint);
         setMessage({ type: 'success', text: result.message });
+        if (result.skipReasons?.length) setIssues({ result });
         onImported?.();
       }
     } catch {
       setMessage({ type: 'error', text: 'Failed to import file. Please try again.' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!issues) return;
+    setDownloading(true);
+    try {
+      await ('jobId' in issues ? downloadImportIssueReport(issues.jobId, endpoint) : downloadImportIssueReportFor(issues.result));
+    } catch {
+      // The job behind a background import is discarded an hour after it finishes, which
+      // is the likeliest reason this fails — say what to do rather than just "error".
+      setMessage({ type: 'error', text: 'Could not build the report. If the import finished over an hour ago, run it again and download straight away.' });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -104,6 +132,17 @@ export default function XlsxUploader({ onImported, endpoint, label, accept = '.x
         <Alert severity={message.type} sx={{ mt: 1 }}>
           {message.text}
         </Alert>
+      )}
+      {issues && (
+        <Button
+          size="small"
+          startIcon={downloading ? <CircularProgress size={14} /> : <DownloadIcon />}
+          onClick={handleDownload}
+          disabled={downloading}
+          sx={{ mt: 1 }}
+        >
+          Download rows that were not imported
+        </Button>
       )}
     </Box>
   );

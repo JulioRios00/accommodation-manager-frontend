@@ -413,6 +413,38 @@ export const startImportJob = (file: File, endpoint = '/import') => {
 export const getImportJobStatus = (jobId: string, endpoint = '/import') =>
   api.get<ImportJobStatus>(`${endpoint}/status/${jobId}`).then(r => r.data);
 
+export interface ImportSkipReason {
+  identifier: string;
+  reason: string;
+  sheet?: string;
+  row?: number;
+  value?: string | null;
+  context?: string | null;
+}
+
+const saveBlob = (data: Blob, filename: string) => {
+  const url = URL.createObjectURL(data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const issuesFilename = () => `import-issues-${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+/** The rows a background import could not use, built from the stored job so the file
+ *  describes the run on screen. Jobs are discarded an hour after they finish. */
+export const downloadImportIssueReport = (jobId: string, endpoint = '/import') =>
+  api.get(`${endpoint}/status/${jobId}/report`, { responseType: 'blob' })
+    .then(r => saveBlob(r.data, issuesFilename()));
+
+/** Same report for the imports that answer directly and leave no job behind: the result
+ *  they returned goes back to the server to be formatted. */
+export const downloadImportIssueReportFor = (result: { message?: string; skipReasons?: ImportSkipReason[] }) =>
+  api.post('/import/report', result, { responseType: 'blob' })
+    .then(r => saveBlob(r.data, issuesFilename()));
+
 // --- Create / Update ---
 export const createProperty = (data: Omit<Property, 'id'>) =>
   api.post<Property>('/properties', data).then(r => r.data);
