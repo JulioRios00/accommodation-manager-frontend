@@ -12,6 +12,19 @@ type RentChangeScope = 'payment' | 'period' | 'bed';
 
 const residentLabel = (r: Resident) => (r.email ? `${r.fullName} — ${r.email}` : r.fullName);
 
+const propertyLabel = (p: Property) => (p.fullAddress ? `${p.code} — ${p.fullAddress}` : p.code);
+
+/** Matches on code and address, so "rathdown" finds 61RR just as "61RR" does. */
+const filterProperties = createFilterOptions<Property>({
+  limit: 50,
+  stringify: propertyLabel,
+});
+
+/** Codes lead with digits (15SEG, 61RR, 136SV), so a plain string sort puts 136SV before
+ *  15SEG. Numeric collation orders them the way someone reading the list expects. */
+const byCode = (a: Property, b: Property) =>
+  a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
+
 /** Matches on name and email, and caps how many options are rendered at once — the
  *  resident list grows without bound and the browser shouldn't paint all of it. */
 const filterResidents = createFilterOptions<Resident>({
@@ -106,6 +119,14 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
     () => [...residents].sort((a, b) => a.fullName.localeCompare(b.fullName)),
     [residents],
   );
+  // Sorted copy, not an in-place sort: `properties` belongs to the parent, and mutating it
+  // would reorder the caller's list as a side effect of opening this dialog.
+  const sortedProperties = useMemo(() => [...properties].sort(byCode), [properties]);
+  const selectedProperty = useMemo(
+    () => properties.find(p => p.id === form.propertyId) ?? null,
+    [properties, form.propertyId],
+  );
+
   const selectedResident = useMemo(
     () => residents.find(r => r.id === form.residentId) ?? null,
     [residents, form.residentId],
@@ -184,13 +205,35 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
             <TextField label="Check-out" type="date" value={form.checkOutDate} onChange={e => set('checkOutDate', e.target.value)} fullWidth size="small" disabled={readOnly} slotProps={{ inputLabel: { shrink: true } }} />
           </Grid>
 
-          {/* Property filter (optional) */}
+          {/* Property filter (optional) — narrows the bed list below. */}
           {properties.length > 0 && (
             <Grid size={{ xs: 12 }}>
-              <TextField select label="Property" value={form.propertyId} onChange={e => handlePropertyChange(e.target.value)} fullWidth size="small" disabled={readOnly}>
-                <MenuItem value=""><em>All properties</em></MenuItem>
-                {properties.map(p => <MenuItem key={p.id} value={p.id}>{p.code}{p.fullAddress ? ` — ${p.fullAddress}` : ''}</MenuItem>)}
-              </TextField>
+              <Autocomplete
+                options={sortedProperties}
+                value={selectedProperty}
+                // Clearing it means "all properties", which is what an empty id already is.
+                onChange={(_e, value) => handlePropertyChange(value?.id ?? '')}
+                getOptionLabel={p => propertyLabel(p)}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                filterOptions={filterProperties}
+                disabled={readOnly}
+                autoHighlight
+                fullWidth
+                size="small"
+                noOptionsText="No matching property"
+                renderInput={params => (
+                  <TextField
+                    {...params}
+                    label="Property"
+                    placeholder="All properties"
+                    helperText="Type to search by code or address"
+                  />
+                )}
+                renderOption={(props, p) => {
+                  const { key, ...rest } = props as typeof props & { key: string };
+                  return <li key={key} {...rest}>{propertyLabel(p)}</li>;
+                }}
+              />
             </Grid>
           )}
 
