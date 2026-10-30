@@ -52,6 +52,7 @@ function DelinquencyTab() {
       renderCell: (p) => <Typography color="error" sx={{ fontWeight: 600 }}>{Number(p.value).toFixed(2)}</Typography> },
     { field: 'lateStatus', headerName: 'Status', width: 150,
       renderCell: (p) => {
+        if (!p.value) return <Typography component="span" color="text.disabled">—</Typography>;
         const color = p.value === 'overdue' ? 'error' : p.value === 'final_demand_d4' ? 'warning' : 'default';
         return <Chip label={p.value} color={color as any} size="small" />;
       }
