@@ -232,7 +232,7 @@ export interface RentPayment {
   paymentDueDay: number | null;
   rentAmount: number;
   amountPaid: number;
-  lateStatus: string;
+  lateStatus: string | null;
   paymentStatus: string;
   datePaid: string | null;
   notes: string | null;
@@ -296,7 +296,7 @@ export interface DelinquencyRow {
   rentAmount: number;
   amountPaid: number;
   amountDue: number;
-  lateStatus: string;
+  lateStatus: string | null;
 }
 
 export interface PortfolioSnapshotRow {
@@ -567,7 +567,7 @@ export interface ReceivablesLedgerRow {
   amountDue: number;
   dueDate: string;
   daysOverdue: number;
-  lateStatus: string;
+  lateStatus: string | null;
   d1ReminderSentAt: string | null;
   d4NoticeSentAt: string | null;
 }

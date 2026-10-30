@@ -17,7 +17,7 @@ function derivePaymentStatus(amountPaid: number, rentAmount: number): string {
 }
 
 type FormState = Omit<RentPayment, 'id'>;
-const empty: FormState = { residentId: '', bookingId: '', propertyId: '', month: '', paymentDueDay: null, rentAmount: 0, amountPaid: 0, lateStatus: 'on_time', paymentStatus: 'unpaid', datePaid: null, notes: null };
+const empty: FormState = { residentId: '', bookingId: '', propertyId: '', month: '', paymentDueDay: null, rentAmount: 0, amountPaid: 0, lateStatus: null, paymentStatus: 'unpaid', datePaid: null, notes: null };
 
 interface Props {
   open: boolean;
@@ -243,7 +243,16 @@ export default function RentPaymentDialog({ open, initial, onClose, onSave, onCh
           <Grid size={{ xs: 4 }}><TextField label="Rent Amount (€)" type="number" value={form.rentAmount} onChange={e => setAndDerive('rentAmount', +e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 4 }}><TextField label="Amount Paid (€)" type="number" value={form.amountPaid} onChange={e => setAndDerive('amountPaid', +e.target.value)} fullWidth size="small" /></Grid>
           <Grid size={{ xs: 4 }}>
-            <TextField select label="Late Status" value={form.lateStatus} onChange={e => set('lateStatus', e.target.value)} fullWidth size="small">
+            <TextField
+              select label="Late Status"
+              value={form.lateStatus ?? ''}
+              // Empty means unknown, which is how months imported from before the tracking
+              // sheet had an Overdue Payment Status column arrive. Opening one of those to
+              // edit something else must not quietly set a status.
+              onChange={e => set('lateStatus', e.target.value === '' ? null : e.target.value)}
+              fullWidth size="small"
+            >
+              <MenuItem value=""><em>— not known</em></MenuItem>
               {['on_time', 'demand_d1', 'final_demand_d4', 'overdue'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </TextField>
           </Grid>

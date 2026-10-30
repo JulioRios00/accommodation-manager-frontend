@@ -30,7 +30,11 @@ import { useTableState } from '@/hooks/useTableState';
 import { useQueryParamState, useDebouncedQueryParamState, useRestoreQueryParams } from '@/hooks/useQueryParamState';
 import { useFeatureFlags } from '@/lib/FeatureFlagsProvider';
 
-const statusChip = (v: string) => {
+/** A dash, not an empty chip, when there is no status. Late Status is unknown for any
+ *  month imported from before the tracking sheet had an Overdue Payment Status column,
+ *  and a blank chip reads as a rendering fault rather than as missing information. */
+const statusChip = (v: string | null | undefined) => {
+  if (!v) return <Typography component="span" color="text.disabled">—</Typography>;
   const color = v === 'paid' || v === 'done' ? 'success' : v === 'partial' || v === 'partially_paid' ? 'warning' : 'default';
   return <Chip label={v} color={color as any} size="small" />;
 };
