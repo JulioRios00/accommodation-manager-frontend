@@ -372,7 +372,9 @@ export interface Bed {
   bedroomName: string | null;
   name: string | null;
   position: number | null;
-  status: 'vacant' | 'allocated';
+  /** `inactive` is a bed that is not lettable stock — a Z bedroom in the control sheet.
+   *  It is its own state: not allocated, and not available either. */
+  status: 'vacant' | 'allocated' | 'inactive';
   bedroomType: string;
   sex: string;
   bedSize: string;

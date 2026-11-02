@@ -10,7 +10,6 @@ import ViewWeekIcon from '@mui/icons-material/ViewWeek';
 import BedIcon from '@mui/icons-material/Bed';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DoNotDisturbIcon from '@mui/icons-material/DoNotDisturb';
-import RadarIcon from '@mui/icons-material/Radar';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, Bed, Bedroom, Property, Resident } from '@/services/api';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
@@ -32,7 +31,7 @@ export default function BedsPage() {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('all');
-  const [cardFilter, setCardFilter] = useState<'total' | 'occupied' | 'empty' | 'onradar' | null>(null);
+  const [cardFilter, setCardFilter] = useState<'total' | 'occupied' | 'empty' | 'inactive' | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bed | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -90,10 +89,12 @@ export default function BedsPage() {
         const s = (params.row as Bed).status;
         return (
           <Chip
-            label={s === 'allocated' ? 'Allocated' : 'Vacant'}
+            label={s === 'allocated' ? 'Allocated' : s === 'inactive' ? 'Inactive' : 'Vacant'}
             size="small"
             sx={{
-              bgcolor: s === 'allocated' ? '#DE9151' : '#4caf50',
+              // Grey, not green: an inactive bed is not available, so it must not read
+              // like a vacancy someone could fill.
+              bgcolor: s === 'allocated' ? '#DE9151' : s === 'inactive' ? '#9e9e9e' : '#4caf50',
               color: 'white',
               fontWeight: 600,
               fontSize: 11,
@@ -137,11 +138,12 @@ export default function BedsPage() {
   const q = search.toLowerCase();
   const filtered = beds
     .filter(b => {
+      if (cardFilter === 'total') return b.status !== 'inactive';
       if (cardFilter === 'occupied') return b.status === 'allocated';
       if (cardFilter === 'empty') return b.status === 'vacant';
-      if (cardFilter === 'onradar') return false;
-      if (statusFilter === 'active') return b.status === 'allocated';
-      if (statusFilter === 'inactive') return b.status === 'vacant';
+      if (cardFilter === 'inactive') return b.status === 'inactive';
+      if (statusFilter === 'active') return b.status !== 'inactive';
+      if (statusFilter === 'inactive') return b.status === 'inactive';
       return true;
     })
     .filter(b => {
@@ -154,10 +156,12 @@ export default function BedsPage() {
     });
 
   const stats = {
-    total: beds.length,
+    // Total counts lettable stock only; inactive beds get their own card so the drop
+    // between the two is visible rather than unexplained.
+    total: beds.filter(b => b.status !== 'inactive').length,
     occupied: beds.filter(b => b.status === 'allocated').length,
     empty: beds.filter(b => b.status === 'vacant').length,
-    onRadar: 0,
+    inactive: beds.filter(b => b.status === 'inactive').length,
   };
 
   return (
@@ -197,12 +201,12 @@ export default function BedsPage() {
           active={cardFilter === 'empty'}
         />
         <StatsCard
-          title="On Radar"
-          value={stats.onRadar}
-          icon={<RadarIcon />}
-          color="#ef6c00"
-          onClick={() => setCardFilter(cardFilter === 'onradar' ? null : 'onradar')}
-          active={cardFilter === 'onradar'}
+          title="Inactive"
+          value={stats.inactive}
+          icon={<DoNotDisturbIcon />}
+          color="#616161"
+          onClick={() => setCardFilter(cardFilter === 'inactive' ? null : 'inactive')}
+          active={cardFilter === 'inactive'}
         />
       </Box>
 

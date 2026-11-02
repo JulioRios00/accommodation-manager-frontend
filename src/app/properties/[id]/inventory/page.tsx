@@ -32,13 +32,14 @@ import { bedCode } from '@/lib/bedCode';
 
 type BedFormState = Omit<Bed, 'id' | 'propertyCode' | 'activeBooking'>;
 
-function StatusChip({ status }: { status: 'vacant' | 'allocated' }) {
+function StatusChip({ status }: { status: Bed['status'] }) {
   return (
     <Chip
-      label={status === 'allocated' ? 'Allocated' : 'Vacant'}
+      label={status === 'allocated' ? 'Allocated' : status === 'inactive' ? 'Inactive' : 'Vacant'}
       size="small"
       sx={{
-        bgcolor: status === 'allocated' ? '#DE9151' : '#4caf50',
+        // Grey for inactive — it is not a vacancy, so it must not be green.
+        bgcolor: status === 'allocated' ? '#DE9151' : status === 'inactive' ? '#9e9e9e' : '#4caf50',
         color: 'white', fontWeight: 600, fontSize: 11,
       }}
     />

@@ -138,6 +138,10 @@ export default function BookingDialog({ open, initial, readOnly = false, beds, r
   const availableBeds = useMemo(() => {
     return propertyBeds.filter(b => {
       if (initial && b.id === initial.bedId) return true;
+      // An inactive bed is not lettable. It fails the `vacant` test below anyway, but it
+      // could still slip through on the contract-end branch, and a bed taken out of use
+      // must not be offered just because its last resident is leaving.
+      if (b.status === 'inactive') return false;
       if (b.status === 'vacant') return true;
       if (form.checkInDate && b.activeBooking?.contractEndDate) {
         // Allow check-in on or after the current resident's contract end date
