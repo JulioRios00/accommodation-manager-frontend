@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { Typography, Box, Button, TextField, Chip, Tabs, Tab } from '@mui/material';
+import { Typography, Box, Button, TextField, Chip, Tabs, Tab, CircularProgress, Alert } from '@mui/material';
+import EmailIcon from '@mui/icons-material/EmailOutlined';
+import { exportOverdueEmailsReport } from '@/services/api';
 import DownloadIcon from '@mui/icons-material/Download';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
@@ -13,6 +15,8 @@ function DelinquencyTab() {
   const [propertyId, setPropertyId] = useState('');
   const [month, setMonth] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailsLoading, setEmailsLoading] = useState(false);
+  const [emailsError, setEmailsError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
 
   const handleSearch = async () => {
@@ -59,6 +63,18 @@ function DelinquencyTab() {
     },
   ];
 
+  const handleOverdueEmails = async () => {
+    setEmailsLoading(true);
+    setEmailsError(null);
+    try {
+      await exportOverdueEmailsReport();
+    } catch {
+      setEmailsError('Could not build the overdue email report. Nothing was sent.');
+    } finally {
+      setEmailsLoading(false);
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
@@ -70,7 +86,18 @@ function DelinquencyTab() {
         {rows.length > 0 && (
           <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleCsv}>Export CSV</Button>
         )}
+        {/* Independent of the search above: it always covers everyone currently overdue,
+            which is exactly the set the escalation job will act on. */}
+        <Button
+          variant="outlined"
+          startIcon={emailsLoading ? <CircularProgress size={14} /> : <EmailIcon />}
+          onClick={handleOverdueEmails}
+          disabled={emailsLoading}
+        >
+          {emailsLoading ? 'Preparing…' : 'Overdue emails to be sent'}
+        </Button>
       </Box>
+      {emailsError && <Alert severity="error" sx={{ mb: 2 }}>{emailsError}</Alert>}
       {searched && (
         <DataGrid rows={rows.map((r, i) => ({ ...r, _id: i }))} columns={columns} getRowId={r => r._id} autoHeight disableRowSelectionOnClick
           pageSizeOptions={[25, 50]} initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}

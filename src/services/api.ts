@@ -809,6 +809,18 @@ export const exportDelinquencyReportCsv = (params?: { propertyId?: string; month
     URL.revokeObjectURL(url);
   });
 
+/** The overdue-rent emails as the escalation job would render them, for review before they
+ *  are sent. Read-only on the server: downloading this sends nothing. */
+export const exportOverdueEmailsReport = () =>
+  api.get('/reports/overdue-emails', { params: { format: 'xlsx' }, responseType: 'blob' }).then(r => {
+    const url = URL.createObjectURL(r.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `overdue-emails-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
 // Custom Report Builder (UC-402)
 export type ReportEntityKey =
   | 'properties' | 'beds' | 'residents' | 'licenceAgreements' | 'maintenanceOperations' | 'landlordAccounts';
