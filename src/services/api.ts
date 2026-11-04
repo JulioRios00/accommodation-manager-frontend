@@ -418,6 +418,10 @@ export const getImportJobStatus = (jobId: string, endpoint = '/import') =>
 export interface ImportSkipReason {
   identifier: string;
   reason: string;
+  /** The short bucket this row was counted under on the import summary. */
+  bucket?: string;
+  /** 'error' needs a correction in the sheet; 'info' was dropped for an expected reason. */
+  severity?: 'error' | 'info';
   sheet?: string;
   row?: number;
   value?: string | null;
