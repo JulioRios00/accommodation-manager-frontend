@@ -8,6 +8,7 @@ import PaymentsIcon from '@mui/icons-material/Payments';
 import HomeWorkIcon from '@mui/icons-material/HomeWork';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import XlsxUploader from '@/components/upload/XlsxUploader';
+import ResetDatabaseButton from '@/components/admin/ResetDatabaseButton';
 
 interface ImportCard {
   title: string;
@@ -91,6 +92,9 @@ export default function ImportPage() {
           </Paper>
         ))}
       </Box>
+      {/* Renders for sysadmins only, and sits below the imports because it is what you
+          reach for before re-importing everything from scratch. */}
+      <ResetDatabaseButton />
     </Box>
   );
 }

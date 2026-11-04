@@ -883,3 +883,27 @@ export interface CompanyProfile {
 export const getCompanyProfile = () => api.get<CompanyProfile>('/company-profile').then(r => r.data);
 export const updateCompanyProfile = (data: { appName: string; logoDataUrl: string | null }) =>
   api.put<CompanyProfile>('/company-profile', data).then(r => r.data);
+
+// --- Admin: destructive operations, sysadmin only (enforced by the API, not by this file) ---
+
+/** Must match RESET_CONFIRMATION on the backend — the API rejects anything else. */
+export const RESET_CONFIRMATION = 'DELETE EVERYTHING';
+
+export interface DatabaseTableCount {
+  table: string;
+  rows: number;
+}
+
+export interface ResetDatabaseResult {
+  tables: DatabaseTableCount[];
+  rowsDeleted: number;
+  tablesCleared: number;
+  completedAt: string;
+  message: string;
+}
+
+export const getDatabaseContents = () =>
+  api.get<{ tables: DatabaseTableCount[]; rowsTotal: number }>('/admin/database-contents').then(r => r.data);
+
+export const resetDatabase = () =>
+  api.post<ResetDatabaseResult>('/admin/reset-database', { confirm: RESET_CONFIRMATION }).then(r => r.data);
