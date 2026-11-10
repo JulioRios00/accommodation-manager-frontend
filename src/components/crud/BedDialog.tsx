@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
   Grid, MenuItem, TextField, Typography,
@@ -68,7 +68,16 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
   const set = (field: keyof FormState, value: unknown) =>
     setForm(f => ({ ...f, [field]: value }));
 
-  const filteredBedrooms = bedrooms.filter(b => b.propertyId === form.propertyId);
+  // Ordered by code, the way the list is read. `numeric` keeps the digit prefixes in
+  // human order (7, 8, 15, 61, 113) instead of the string order 113, 15, 61, 7.
+  const sortedProperties = useMemo(
+    () => [...properties].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' })),
+    [properties],
+  );
+
+  const filteredBedrooms = bedrooms
+    .filter(b => b.propertyId === form.propertyId)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
   const handleSave = async () => {
     setSaving(true);
@@ -123,12 +132,12 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
               onChange={e => { set('propertyId', e.target.value); set('bedroomId', null); }}
               fullWidth required size="small"
             >
-              {properties.map(p => (
+              {sortedProperties.map(p => (
                 <MenuItem key={p.id} value={p.id}>
                   {p.code} — {p.fullAddress ?? p.area}{p.active === false ? ' (out of lease)' : ''}
                 </MenuItem>
               ))}
-              {initial && !properties.some(p => p.id === initial.propertyId) && (
+              {initial && !sortedProperties.some(p => p.id === initial.propertyId) && (
                 <MenuItem value={initial.propertyId}>
                   {initial.propertyCode ?? 'Current property'}
                 </MenuItem>
