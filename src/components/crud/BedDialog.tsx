@@ -5,6 +5,7 @@ import {
   Grid, MenuItem, TextField, Typography,
 } from '@mui/material';
 import { Bed, Bedroom, Property } from '@/services/api';
+import { bedCode } from '@/lib/bedCode';
 
 type FormState = Omit<Bed, 'id' | 'propertyCode' | 'activeBooking'>;
 
@@ -83,7 +84,15 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>{initial ? 'Edit Bed' : 'New Bed'}</span>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+            <span>{initial ? 'Edit Bed' : 'New Bed'}</span>
+            {/* The same code the grid row shows, so there is no doubt which bed this is. */}
+            {initial && (
+              <Box component="span" sx={{ fontFamily: 'monospace', fontWeight: 700, color: 'primary.main' }}>
+                {bedCode(initial)}
+              </Box>
+            )}
+          </Box>
           {initial && (
             <Chip
               label={
