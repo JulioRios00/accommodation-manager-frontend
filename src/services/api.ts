@@ -62,7 +62,9 @@ api.interceptors.response.use(
 export interface DashboardStats {
   totalProperties: number;
   inactiveProperties: number;
+  /** Lettable beds only — deactivated ones are counted in `inactiveBeds`. */
   totalBeds: number;
+  inactiveBeds: number;
   occupiedBeds: number;
   availableBeds: number;
   onRadarBeds: number;

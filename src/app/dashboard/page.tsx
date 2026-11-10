@@ -165,7 +165,9 @@ export default function DashboardPage() {
         return true;
       })
       .map(p => {
-        const propertyBeds = beds.filter(b => b.propertyId === p.id);
+        // Lettable stock only, matching the headline Occupancy card: a deactivated bed
+        // is not a vacancy anyone can fill, so counting it would understate the rate.
+        const propertyBeds = beds.filter(b => b.propertyId === p.id && b.status !== 'inactive');
         const occupied = propertyBeds.filter(b => b.status === 'allocated').length;
         const total = propertyBeds.length;
         const occupancyRate = total > 0 ? Math.round((occupied / total) * 100) : 0;
@@ -370,7 +372,7 @@ export default function DashboardPage() {
           <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700, lineHeight: 1.5 }}>
             Beds
           </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 1.5 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(5, 1fr)' }, gap: 1.5 }}>
             <StatsCard title="Total Beds" value={stats?.totalBeds ?? 0} icon={<BedIcon />} color="#114C5A" />
             <StatsCard
               title="Occupied" value={stats?.occupiedBeds ?? 0} icon={<CheckCircleIcon />} color="#2e7d32"
@@ -387,6 +389,9 @@ export default function DashboardPage() {
               onClick={() => setStatusFilter(s => s === 'onradar' ? '' : 'onradar')}
               active={statusFilter === 'onradar'}
             />
+            {/* Total Beds counts lettable stock only, so the beds taken out of it have to
+                be visible somewhere — otherwise the total just looks wrong. */}
+            <StatsCard title="Inactive" value={stats?.inactiveBeds ?? 0} icon={<VisibilityOffIcon />} color="#757575" />
           </Box>
         </Box>
 
