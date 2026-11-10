@@ -54,7 +54,9 @@ export default function BedsPage() {
 
   const load = () => getBeds().then(setBeds).catch(() => {});
   useEffect(() => { load(); }, []);
-  useEffect(() => { getProperties().then(setProperties).catch(() => {}); }, []);
+  // Beds outlive their property's lease, so the picker has to carry the out-of-lease
+  // ones too — otherwise editing such a bed shows an empty Property field.
+  useEffect(() => { getProperties(true).then(setProperties).catch(() => {}); }, []);
   useEffect(() => { getBedrooms().then(setBedrooms).catch(() => {}); }, []);
   useEffect(() => { getResidents().then(setResidents).catch(() => {}); }, []);
 

@@ -14,6 +14,17 @@ const empty: FormState = {
   depositAmount: 0, rentAmount: 0,
 };
 
+/**
+ * A Select whose value is missing from its options renders blank, and saving that blank
+ * writes it over the real value. Two things put values outside these lists: a property
+ * that is out of lease (the list only carries lettable ones unless asked otherwise), and
+ * the imported sheet's own vocabulary ("Twin Stnd", "Bnk - Top"), which predates the
+ * tidy options below. Keeping the current value as an option shows what the bed actually
+ * is instead of silently emptying the field.
+ */
+const withCurrent = (options: string[], current?: string | null) =>
+  current && !options.includes(current) ? [...options, current] : options;
+
 interface Props {
   open: boolean;
   initial?: Bed | null;
@@ -104,8 +115,15 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
               fullWidth required size="small"
             >
               {properties.map(p => (
-                <MenuItem key={p.id} value={p.id}>{p.code} — {p.fullAddress ?? p.area}</MenuItem>
+                <MenuItem key={p.id} value={p.id}>
+                  {p.code} — {p.fullAddress ?? p.area}{p.active === false ? ' (out of lease)' : ''}
+                </MenuItem>
               ))}
+              {initial && !properties.some(p => p.id === initial.propertyId) && (
+                <MenuItem value={initial.propertyId}>
+                  {initial.propertyCode ?? 'Current property'}
+                </MenuItem>
+              )}
             </TextField>
           </Grid>
           <Grid size={{ xs: 4 }}>
@@ -149,7 +167,7 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
               onChange={e => set('bedroomType', e.target.value)}
               fullWidth required size="small"
             >
-              {['Single', 'Twin', 'Triple', 'Twin Studio', 'Studio'].map(v => (
+              {withCurrent(['Single', 'Twin', 'Triple', 'Twin Studio', 'Studio'], form.bedroomType).map(v => (
                 <MenuItem key={v} value={v}>{v}</MenuItem>
               ))}
             </TextField>
@@ -160,7 +178,7 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
               onChange={e => set('sex', e.target.value)}
               fullWidth required size="small"
             >
-              {['M', 'F', 'Mixed'].map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+              {withCurrent(['M', 'F', 'Mixed'], form.sex).map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid size={{ xs: 12 }}>
@@ -169,7 +187,7 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
               onChange={e => set('bedSize', e.target.value)}
               fullWidth required size="small"
             >
-              {['Single', 'Double'].map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+              {withCurrent(['Single', 'Double'], form.bedSize).map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid size={{ xs: 6 }}>
@@ -189,7 +207,8 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
           {initial && (
             <Grid size={{ xs: 12 }}>
               <Typography variant="caption" color="text.secondary">
-                Status is managed automatically (vacant ↔ allocated via bookings).
+                Status is managed automatically (vacant ↔ allocated via bookings). Use the
+                block button on the Beds list to take this bed out of lettable stock.
               </Typography>
             </Grid>
           )}
