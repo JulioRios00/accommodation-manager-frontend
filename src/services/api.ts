@@ -473,6 +473,17 @@ export const deleteBed = (id: string) =>
 export const setBedActivation = (id: string, action: 'activate' | 'deactivate') =>
   api.patch<Bed>(`/beds/${id}/activation`, { action }).then(r => r.data);
 
+export interface BulkActivationResult {
+  changed: number;
+  /** Already in the requested state. Not an error. */
+  unchanged: number;
+  failed: { id: string; reason: string }[];
+}
+
+/** The same over a selection. Carries on past beds it cannot change and reports each. */
+export const setBedActivationBulk = (ids: string[], action: 'activate' | 'deactivate') =>
+  api.patch<BulkActivationResult>('/beds/activation', { ids, action }).then(r => r.data);
+
 export const createResident = (data: Omit<Resident, 'id'>) =>
   api.post<Resident>('/residents', data).then(r => r.data);
 export const updateResident = (id: string, data: Partial<Resident>) =>

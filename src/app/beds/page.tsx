@@ -12,8 +12,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DoNotDisturbIcon from '@mui/icons-material/DoNotDisturb';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, setBedActivation, Bed, Bedroom, Property, Resident } from '@/services/api';
+import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
+import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, setBedActivation, setBedActivationBulk, BulkActivationResult, Bed, Bedroom, Property, Resident } from '@/services/api';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import ColumnReorderDialog from '@/components/shared/ColumnReorderDialog';
 import BedDialog from '@/components/crud/BedDialog';
@@ -24,6 +24,8 @@ import { useTableState } from '@/hooks/useTableState';
 import { bedCode } from '@/lib/bedCode';
 
 type BedFormState = Omit<Bed, 'id' | 'propertyCode' | 'activeBooking'>;
+
+const EMPTY_SELECTION: GridRowSelectionModel = { type: 'include', ids: new Set() };
 
 export default function BedsPage() {
   const { can } = useRole();
@@ -42,6 +44,11 @@ export default function BedsPage() {
   // The backend refuses to deactivate an occupied bed and says who is in it — that
   // message is the useful part, so it is shown rather than a generic failure.
   const [activationError, setActivationError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<GridRowSelectionModel>(EMPTY_SELECTION);
+  /** The bulk action awaiting confirmation, and the outcome of the last one. */
+  const [bulkAction, setBulkAction] = useState<'activate' | 'deactivate' | null>(null);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkActivationResult | null>(null);
   const [columnReorderOpen, setColumnReorderOpen] = useState(false);
   const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, setColumnOrder, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('beds_col_visibility');
 
@@ -203,6 +210,49 @@ export default function BedsPage() {
       ].some(v => v?.toLowerCase().includes(q));
     });
 
+  // 'exclude' is what the header checkbox produces for select-all, where `ids` holds the
+  // rows that were unticked — so it has to be resolved against the rows actually on
+  // screen, or a filtered-out bed would be swept into the action.
+  const selectedIds = useMemo(
+    () => selection.type === 'include'
+      ? ([...selection.ids] as string[]).filter(id => filtered.some(b => b.id === id))
+      : filtered.filter(b => !selection.ids.has(b.id)).map(b => b.id),
+    [selection, filtered],
+  );
+
+  const selectedBeds = useMemo(
+    () => selectedIds.map(id => beds.find(b => b.id === id)).filter((b): b is Bed => !!b),
+    [selectedIds, beds],
+  );
+
+  // What the action would actually do, so the confirmation can say it rather than claim
+  // the whole selection is about to change.
+  const bulkPreview = useMemo(() => {
+    if (!bulkAction) return { willChange: 0, alreadyThere: 0, blocked: 0 };
+    const deactivating = bulkAction === 'deactivate';
+    return {
+      willChange: selectedBeds.filter(b => deactivating ? b.status === 'vacant' : b.status === 'inactive').length,
+      alreadyThere: selectedBeds.filter(b => deactivating ? b.status === 'inactive' : b.status !== 'inactive').length,
+      blocked: deactivating ? selectedBeds.filter(b => b.status === 'allocated').length : 0,
+    };
+  }, [bulkAction, selectedBeds]);
+
+  const runBulk = async () => {
+    if (!bulkAction) return;
+    setBulkRunning(true);
+    try {
+      const res = await setBedActivationBulk(selectedIds, bulkAction);
+      setBulkResult(res);
+      setSelection(EMPTY_SELECTION);
+      await load();
+    } catch (err: any) {
+      setActivationError(err?.response?.data?.message ?? 'Could not change these beds. Nothing was saved.');
+    } finally {
+      setBulkRunning(false);
+      setBulkAction(null);
+    }
+  };
+
   const stats = {
     // Total counts lettable stock only; inactive beds get their own card so the drop
     // between the two is visible rather than unexplained.
@@ -287,6 +337,44 @@ export default function BedsPage() {
         </Tooltip>
       </Box>
 
+      {can('bed:edit') && selectedIds.length > 0 && (
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, p: 1.5,
+          bgcolor: '#FFF0E6', borderRadius: 1,
+        }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {selectedIds.length} bed{selectedIds.length === 1 ? '' : 's'} selected
+          </Typography>
+          <Button size="small" variant="outlined" color="error" startIcon={<BlockIcon />} onClick={() => setBulkAction('deactivate')}>
+            Deactivate
+          </Button>
+          <Button size="small" variant="outlined" color="success" startIcon={<CheckCircleOutlineIcon />} onClick={() => setBulkAction('activate')}>
+            Activate
+          </Button>
+          <Button size="small" onClick={() => setSelection(EMPTY_SELECTION)}>Clear selection</Button>
+        </Box>
+      )}
+
+      {bulkResult && (
+        <Alert severity={bulkResult.failed.length ? 'warning' : 'success'} sx={{ mb: 2 }} onClose={() => setBulkResult(null)}>
+          <Typography variant="body2">
+            {bulkResult.changed} bed{bulkResult.changed === 1 ? '' : 's'} changed
+            {bulkResult.unchanged > 0 && `, ${bulkResult.unchanged} already in that state`}
+            {bulkResult.failed.length > 0 && `, ${bulkResult.failed.length} could not be changed`}.
+          </Typography>
+          {/* The refused ones are named: "4 failed" just sends someone hunting the grid
+              for which four. Bed codes, because that is what the grid shows. */}
+          {bulkResult.failed.length > 0 && (
+            <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
+              {bulkResult.failed.map(f => {
+                const bed = beds.find(b => b.id === f.id);
+                return <li key={f.id}><Typography variant="body2">{bed ? bedCode(bed) : f.id}: {f.reason}</Typography></li>;
+              })}
+            </Box>
+          )}
+        </Alert>
+      )}
+
       <Box sx={{ bgcolor: 'white', borderRadius: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
         <DataGrid
           autoHeight
@@ -294,6 +382,9 @@ export default function BedsPage() {
           columns={columnsWithWidthsAndOrder}
           pageSizeOptions={[10, 25]}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          checkboxSelection={can('bed:edit')}
+          rowSelectionModel={selection}
+          onRowSelectionModelChange={setSelection}
           disableRowSelectionOnClick
           columnVisibilityModel={columnVisibility}
           onColumnVisibilityModelChange={handleColumnVisibilityChange}
@@ -344,6 +435,21 @@ export default function BedsPage() {
         }
         onConfirm={handleActivation}
         onCancel={() => setActivating(null)}
+      />
+      <ConfirmDialog
+        open={!!bulkAction && !bulkRunning}
+        title={bulkAction === 'activate' ? 'Activate beds' : 'Deactivate beds'}
+        confirmLabel={bulkAction === 'activate' ? 'Activate' : 'Deactivate'}
+        confirmColor={bulkAction === 'activate' ? 'success' : 'error'}
+        message={
+          `${bulkPreview.willChange} of the ${selectedIds.length} selected bed${selectedIds.length === 1 ? '' : 's'} will be ` +
+          `${bulkAction === 'activate' ? 'put back into' : 'taken out of'} lettable stock` +
+          (bulkPreview.alreadyThere ? `, ${bulkPreview.alreadyThere} already ${bulkAction === 'activate' ? 'active' : 'inactive'}` : '') +
+          (bulkPreview.blocked ? `, and ${bulkPreview.blocked} occupied and will be skipped` : '') +
+          `. Re-importing the spreadsheet will no longer change the status of the beds that change here.`
+        }
+        onConfirm={runBulk}
+        onCancel={() => setBulkAction(null)}
       />
       <Snackbar
         open={!!activationError}
