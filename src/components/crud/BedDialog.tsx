@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
+  Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
   Grid, MenuItem, TextField, Typography,
 } from '@mui/material';
 import { Bed, Bedroom, Property } from '@/services/api';
@@ -23,6 +23,11 @@ const empty: FormState = {
  * tidy options below. Keeping the current value as an option shows what the bed actually
  * is instead of silently emptying the field.
  */
+const propertyLabel = (p: Property) => {
+  const where = p.fullAddress ?? p.area;
+  return `${p.code}${where ? ` — ${where}` : ''}${p.active === false ? ' (out of lease)' : ''}`;
+};
+
 const withCurrent = (options: string[], current?: string | null) =>
   current && !options.includes(current) ? [...options, current] : options;
 
@@ -77,6 +82,19 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
     [properties],
   );
 
+  // The picker has a few hundred entries, so it is a search box rather than a plain list.
+  // A bed whose property somehow isn't in the list still needs one, or the Autocomplete
+  // would show empty and the save would drop the property.
+  const propertyOptions = useMemo(() => {
+    if (!initial || sortedProperties.some(p => p.id === initial.propertyId)) return sortedProperties;
+    return [
+      { id: initial.propertyId, code: initial.propertyCode ?? 'Current property' } as Property,
+      ...sortedProperties,
+    ];
+  }, [sortedProperties, initial]);
+
+  const selectedProperty = propertyOptions.find(p => p.id === form.propertyId) ?? null;
+
   const filteredBedrooms = bedrooms
     .filter(b => b.propertyId === form.propertyId)
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
@@ -129,22 +147,32 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           <Grid size={{ xs: 8 }}>
-            <TextField
-              select label="Property" value={form.propertyId}
-              onChange={e => { set('propertyId', e.target.value); set('bedroomId', null); }}
-              fullWidth required size="small"
-            >
-              {sortedProperties.map(p => (
-                <MenuItem key={p.id} value={p.id}>
-                  {p.code} — {p.fullAddress ?? p.area}{p.active === false ? ' (out of lease)' : ''}
-                </MenuItem>
-              ))}
-              {initial && !sortedProperties.some(p => p.id === initial.propertyId) && (
-                <MenuItem value={initial.propertyId}>
-                  {initial.propertyCode ?? 'Current property'}
-                </MenuItem>
+            <Autocomplete
+              options={propertyOptions}
+              value={selectedProperty}
+              onChange={(_e, p) => { set('propertyId', p?.id ?? ''); set('bedroomId', null); }}
+              getOptionLabel={propertyLabel}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              // Matches on code and on address, so "lucan" finds the house and "15SEG"
+              // finds it by code — whichever the user happens to know.
+              filterOptions={(opts, { inputValue }) => {
+                const q = inputValue.trim().toLowerCase();
+                if (!q) return opts;
+                return opts.filter(p => propertyLabel(p).toLowerCase().includes(q));
+              }}
+              size="small"
+              fullWidth
+              autoHighlight
+              openOnFocus
+              renderOption={(props, p) => (
+                <Box component="li" {...props} key={p.id} sx={{ fontSize: 14 }}>
+                  {propertyLabel(p)}
+                </Box>
               )}
-            </TextField>
+              renderInput={params => (
+                <TextField {...params} label="Property" required placeholder="Search by code or address" />
+              )}
+            />
           </Grid>
           <Grid size={{ xs: 4 }}>
             <TextField
