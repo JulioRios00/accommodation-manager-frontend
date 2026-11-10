@@ -68,10 +68,12 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
   const set = (field: keyof FormState, value: unknown) =>
     setForm(f => ({ ...f, [field]: value }));
 
-  // Ordered by code, the way the list is read. `numeric` keeps the digit prefixes in
-  // human order (7, 8, 15, 61, 113) instead of the string order 113, 15, 61, 7.
+  // Straight character-by-character order on the code: 01, 02, 03, then 0A, 0B. Codes are
+  // inconsistently padded ("1CTB" alongside "01TD"), and reading them as numbers made 1
+  // and 01 equal, so those interleaved unpredictably. Literal order keeps each padding
+  // style in its own block, which is what the list looks like to someone scanning it.
   const sortedProperties = useMemo(
-    () => [...properties].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' })),
+    () => [...properties].sort((a, b) => a.code.localeCompare(b.code, undefined, { sensitivity: 'base' })),
     [properties],
   );
 
