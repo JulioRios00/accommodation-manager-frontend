@@ -75,10 +75,19 @@ export default function BedDialog({ open, initial, properties, bedrooms, default
           <span>{initial ? 'Edit Bed' : 'New Bed'}</span>
           {initial && (
             <Chip
-              label={initial.status === 'allocated' ? 'Allocated' : 'Vacant'}
+              label={
+                initial.status === 'allocated' ? 'Allocated'
+                  : initial.status === 'inactive' ? 'Inactive'
+                    : 'Vacant'
+              }
               size="small"
               sx={{
-                bgcolor: initial.status === 'allocated' ? '#DE9151' : '#4caf50',
+                // Grey, not green: an inactive bed is not available, so it must not read
+                // as one. Matches the chip on the Beds grid.
+                bgcolor:
+                  initial.status === 'allocated' ? '#DE9151'
+                    : initial.status === 'inactive' ? '#9e9e9e'
+                      : '#4caf50',
                 color: 'white',
                 fontWeight: 600,
               }}

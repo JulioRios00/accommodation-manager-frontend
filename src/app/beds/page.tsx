@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, ButtonGroup, Tooltip, Divider } from '@mui/material';
+import { Typography, Box, Button, Chip, IconButton, TextField, InputAdornment, ButtonGroup, Tooltip, Divider, Alert, Snackbar } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -10,8 +10,10 @@ import ViewWeekIcon from '@mui/icons-material/ViewWeek';
 import BedIcon from '@mui/icons-material/Bed';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DoNotDisturbIcon from '@mui/icons-material/DoNotDisturb';
+import BlockIcon from '@mui/icons-material/Block';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, Bed, Bedroom, Property, Resident } from '@/services/api';
+import { getBeds, getBedrooms, getProperties, getResidents, createBed, updateBed, deleteBed, setBedActivation, Bed, Bedroom, Property, Resident } from '@/services/api';
 import CustomGridFooter from '@/components/shared/CustomGridFooter';
 import ColumnReorderDialog from '@/components/shared/ColumnReorderDialog';
 import BedDialog from '@/components/crud/BedDialog';
@@ -35,6 +37,11 @@ export default function BedsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bed | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  /** The bed whose activation is being confirmed, and the direction it is going. */
+  const [activating, setActivating] = useState<{ bed: Bed; action: 'activate' | 'deactivate' } | null>(null);
+  // The backend refuses to deactivate an occupied bed and says who is in it — that
+  // message is the useful part, so it is shown rather than a generic failure.
+  const [activationError, setActivationError] = useState<string | null>(null);
   const [columnReorderOpen, setColumnReorderOpen] = useState(false);
   const { columnVisibility, handleColumnVisibilityChange, resetTableLayout, applyColumnWidths, columnOrder, setColumnOrder, applyColumnOrder, sortModel, handleSortModelChange } = useTableState('beds_col_visibility');
 
@@ -50,6 +57,18 @@ export default function BedsPage() {
     if (id) await updateBed(id, data);
     else await createBed(data);
     await load();
+  };
+
+  const handleActivation = async () => {
+    if (!activating) return;
+    const { bed, action } = activating;
+    setActivating(null);
+    try {
+      await setBedActivation(bed.id, action);
+      await load();
+    } catch (err: any) {
+      setActivationError(err?.response?.data?.message ?? 'Could not change this bed. Nothing was saved.');
+    }
   };
 
   const handleDelete = async () => {
@@ -111,7 +130,7 @@ export default function BedsPage() {
     {
       field: 'actions',
       headerName: '',
-      width: 90,
+      width: 124,
       sortable: false,
       renderCell: (params) => (
         <Box>
@@ -120,6 +139,35 @@ export default function BedsPage() {
               <EditIcon fontSize="small" />
             </IconButton>
           )}
+          {can('bed:edit') && (params.row.status === 'inactive' ? (
+            <Tooltip title="Put this bed back into lettable stock">
+              <IconButton
+                size="small"
+                color="success"
+                onClick={() => setActivating({ bed: params.row as Bed, action: 'activate' })}
+              >
+                <CheckCircleOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Tooltip title={
+              params.row.status === 'allocated'
+                ? 'Occupied — end or move the booking first'
+                : 'Take this bed out of lettable stock'
+            }>
+              {/* A disabled IconButton fires no events, so the tooltip needs a wrapper
+                  that still does — otherwise the reason for the disabling is invisible. */}
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={params.row.status === 'allocated'}
+                  onClick={() => setActivating({ bed: params.row as Bed, action: 'deactivate' })}
+                >
+                  <BlockIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ))}
           {can('bed:write') && (
             <IconButton size="small" color="error" onClick={() => setDeleteId(params.row.id)}>
               <DeleteIcon fontSize="small" />
@@ -284,6 +332,27 @@ export default function BedsPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}
       />
+      <ConfirmDialog
+        open={!!activating}
+        title={activating?.action === 'activate' ? 'Activate bed' : 'Deactivate bed'}
+        confirmLabel={activating?.action === 'activate' ? 'Activate' : 'Deactivate'}
+        confirmColor={activating?.action === 'activate' ? 'success' : 'error'}
+        message={
+          activating?.action === 'activate'
+            ? `Put bed ${activating ? bedCode(activating.bed) : ''} back into lettable stock? It will count towards vacancies again and can be booked.`
+            : `Take bed ${activating ? bedCode(activating.bed) : ''} out of lettable stock? It stays in the records and keeps its history, but stops counting as a vacancy and cannot be booked. Re-importing the spreadsheet will no longer change this bed's status.`
+        }
+        onConfirm={handleActivation}
+        onCancel={() => setActivating(null)}
+      />
+      <Snackbar
+        open={!!activationError}
+        autoHideDuration={8000}
+        onClose={() => setActivationError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setActivationError(null)}>{activationError}</Alert>
+      </Snackbar>
     </Box>
   );
 }

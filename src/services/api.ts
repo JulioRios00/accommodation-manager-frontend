@@ -380,6 +380,8 @@ export interface Bed {
   bedSize: string;
   depositAmount: number;
   rentAmount: number;
+  /** True once the status was set by hand here — the importer then leaves it alone. */
+  statusSetManually?: boolean;
   activeBooking?: Booking | null;
 }
 
@@ -467,6 +469,9 @@ export const updateBed = (id: string, data: Partial<Omit<Bed, 'propertyCode' | '
   api.put<Bed>(`/beds/${id}`, data).then(r => r.data);
 export const deleteBed = (id: string) =>
   api.delete(`/beds/${id}`);
+/** Takes a bed out of lettable stock, or puts it back. 400s if the bed is occupied. */
+export const setBedActivation = (id: string, action: 'activate' | 'deactivate') =>
+  api.patch<Bed>(`/beds/${id}/activation`, { action }).then(r => r.data);
 
 export const createResident = (data: Omit<Resident, 'id'>) =>
   api.post<Resident>('/residents', data).then(r => r.data);
