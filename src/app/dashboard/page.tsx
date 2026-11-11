@@ -70,7 +70,7 @@ export default function DashboardPage() {
   const [buFilter, setBuFilter] = useState('');
   const [areaFilter, setAreaFilter] = useState('');
   const [availWindow, setAvailWindow] = useState(0);
-  const [statusFilter, setStatusFilter] = useState(''); // 'occupied' | 'onradar' | 'available' | ''
+  const [statusFilter, setStatusFilter] = useState(''); // 'occupied' | 'onradar' | 'available' | 'inactive' | ''
 
   // Property table selection (for drilling into beds)
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
@@ -168,6 +168,7 @@ export default function DashboardPage() {
         // Lettable stock only, matching the headline Occupancy card: a deactivated bed
         // is not a vacancy anyone can fill, so counting it would understate the rate.
         const propertyBeds = beds.filter(b => b.propertyId === p.id && b.status !== 'inactive');
+        const inactive = beds.filter(b => b.propertyId === p.id && b.status === 'inactive').length;
         const occupied = propertyBeds.filter(b => b.status === 'allocated').length;
         const total = propertyBeds.length;
         const occupancyRate = total > 0 ? Math.round((occupied / total) * 100) : 0;
@@ -191,6 +192,7 @@ export default function DashboardPage() {
           area: p.area ?? '—',
           total,
           occupied,
+          inactive,
           empty: total - occupied,
           occupancyRate,
           monthly,
@@ -207,6 +209,7 @@ export default function DashboardPage() {
       if (statusFilter === 'occupied') return row.occupied > 0;
       if (statusFilter === 'available') return row.empty > 0;
       if (statusFilter === 'onradar') return row.onRadar > 0;
+      if (statusFilter === 'inactive') return row.inactive > 0;
       return true;
     });
   }, [propertyRows, statusFilter]);
@@ -228,7 +231,10 @@ export default function DashboardPage() {
       })
       .filter(b => {
         if (statusFilter === 'occupied') return b.status === 'allocated';
-        if (statusFilter === 'available') return b.status !== 'allocated';
+        // Empty means lettable and unoccupied. A deactivated bed is neither occupied nor
+        // available to fill, so it belongs in neither bucket.
+        if (statusFilter === 'available') return b.status === 'vacant';
+        if (statusFilter === 'inactive') return b.status === 'inactive';
         if (statusFilter === 'onradar') {
           const d = daysUntil(b.activeBooking?.contractEndDate);
           return d !== null && d >= 0 && d <= 38;
@@ -243,7 +249,7 @@ export default function DashboardPage() {
         bedSize: bed.bedSize,
         rentAmount: bed.rentAmount,
         depositAmount: bed.depositAmount,
-        status: bed.status === 'allocated' ? 'Occupied' : 'Empty',
+        status: bed.status === 'allocated' ? 'Occupied' : bed.status === 'inactive' ? 'Inactive' : 'Empty',
         residentId: bed.activeBooking?.residentId ?? null,
         residentName: bed.activeBooking?.residentId ? (residentMap.get(bed.activeBooking.residentId)?.fullName ?? '—') : '—',
         residentTelephone: bed.activeBooking?.residentId ? (residentMap.get(bed.activeBooking.residentId)?.telephone ?? '—') : '—',
@@ -260,7 +266,8 @@ export default function DashboardPage() {
   // bed count double-counts beds in properties that have a mix of occupied/empty/on-radar
   // beds, since such a property can satisfy more than one status filter at once.
   const filteredOccupied = useMemo(() => bedRows.filter(b => b.status === 'Occupied').length, [bedRows]);
-  const filteredTotal = bedRows.length;
+  // Lettable rows only, so the filtered rate is measured the same way the headline one is.
+  const filteredTotal = useMemo(() => bedRows.filter(b => b.status !== 'Inactive').length, [bedRows]);
   const filteredOccupancyRate = filteredTotal > 0 ? Math.round((filteredOccupied / filteredTotal) * 100) : 0;
   const filteredMonthly = useMemo(
     () => bedRows.filter(b => b.status === 'Occupied').reduce((s, b) => s + (b.rentAmount ?? 0), 0),
@@ -316,10 +323,13 @@ export default function DashboardPage() {
           <Chip
             label={p.value as string}
             size="small"
-            sx={p.value === 'Occupied'
-              ? { bgcolor: '#2e7d32', color: 'white', fontWeight: 500 }
-              : { bgcolor: '#d32f2f', color: 'white', fontWeight: 500 }
-            }
+            sx={{
+              // Grey for inactive: it is not a vacancy anyone can fill, so it must not
+              // read like one. Matches the chips on the Beds page.
+              bgcolor: p.value === 'Occupied' ? '#2e7d32' : p.value === 'Inactive' ? '#9e9e9e' : '#d32f2f',
+              color: 'white',
+              fontWeight: 500,
+            }}
           />
         </Cell>
       ),
@@ -391,7 +401,11 @@ export default function DashboardPage() {
             />
             {/* Total Beds counts lettable stock only, so the beds taken out of it have to
                 be visible somewhere — otherwise the total just looks wrong. */}
-            <StatsCard title="Inactive" value={stats?.inactiveBeds ?? 0} icon={<VisibilityOffIcon />} color="#757575" />
+            <StatsCard
+              title="Inactive" value={stats?.inactiveBeds ?? 0} icon={<VisibilityOffIcon />} color="#757575"
+              onClick={() => setStatusFilter(s => s === 'inactive' ? '' : 'inactive')}
+              active={statusFilter === 'inactive'}
+            />
           </Box>
         </Box>
 
@@ -440,6 +454,7 @@ export default function DashboardPage() {
             <MenuItem value="occupied"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#2e7d32' }} />Occupied</Box></MenuItem>
             <MenuItem value="onradar"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ef6c00' }} />On Radar</Box></MenuItem>
             <MenuItem value="available"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#d32f2f' }} />Empty</Box></MenuItem>
+            <MenuItem value="inactive"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#9e9e9e' }} />Inactive</Box></MenuItem>
           </TextField>
           <TextField
             label="Area / Location" value={areaFilter}
